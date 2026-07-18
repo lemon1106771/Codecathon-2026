@@ -5,6 +5,7 @@ function MatchReveal({ myUserId, matchData, onStartChat, onSkip }) {
 
   const {
     compatibility_pct,
+    user_a,
     user_b,
     shared_interests,
     time_alignment,
@@ -12,6 +13,11 @@ function MatchReveal({ myUserId, matchData, onStartChat, onSkip }) {
     blind_spot_b,
     shared_video_count
   } = matchData;
+
+  const isUserA = String(user_a) === String(myUserId);
+  const strangerId = isUserA ? user_b : user_a;
+  const myBlindSpot = isUserA ? blind_spot_a : blind_spot_b;
+  const theirBlindSpot = isUserA ? blind_spot_b : blind_spot_a;
 
   return (
     <div style={styles.container}>
@@ -31,7 +37,7 @@ function MatchReveal({ myUserId, matchData, onStartChat, onSkip }) {
         <div style={styles.usersBar}>
           <div style={styles.userBadge}>You (User #{myUserId})</div>
           <div style={styles.userConnector}>⇄</div>
-          <div style={styles.userBadge}>Stranger (User #{user_b})</div>
+          <div style={styles.userBadge}>Stranger (User #{strangerId})</div>
         </div>
 
         {/* Overlap Summary */}
@@ -62,7 +68,7 @@ function MatchReveal({ myUserId, matchData, onStartChat, onSkip }) {
             <h4 style={styles.blindSpotTitle}>Your Blind Spot 🔍</h4>
             <p style={styles.blindSpotDesc}>Channels they watch that you never do:</p>
             <div style={styles.blindSpotList}>
-              {blind_spot_a.map((item, index) => (
+              {myBlindSpot.map((item, index) => (
                 <span key={index} style={styles.blindSpotTag}>{item}</span>
               ))}
             </div>
@@ -72,7 +78,7 @@ function MatchReveal({ myUserId, matchData, onStartChat, onSkip }) {
             <h4 style={styles.blindSpotTitle}>Their Blind Spot 🔍</h4>
             <p style={styles.blindSpotDesc}>Channels you watch that they never do:</p>
             <div style={styles.blindSpotList}>
-              {blind_spot_b.map((item, index) => (
+              {theirBlindSpot.map((item, index) => (
                 <span key={index} style={styles.blindSpotTag}>{item}</span>
               ))}
             </div>

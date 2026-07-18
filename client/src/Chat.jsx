@@ -8,6 +8,8 @@ function Chat({ myUserId, matchData, onBack }) {
   const [isConnected, setIsConnected] = useState(false);
   const chatEndRef = useRef(null);
 
+  const strangerId = String(matchData.user_a) === String(myUserId) ? matchData.user_b : matchData.user_a;
+
   useEffect(() => {
     // Connect to server (either localhost or deployed host)
     const serverUrl = window.location.hostname === 'localhost' ? 'http://localhost:3001' : '';
@@ -75,7 +77,7 @@ function Chat({ myUserId, matchData, onBack }) {
                 ...styles.statusDot, 
                 backgroundColor: isConnected ? '#4caf50' : '#f44336' 
               }} />
-              {isConnected ? `Room: ${matchData.user_b}` : 'Connecting...'}
+              {isConnected ? `Stranger: User #${strangerId}` : 'Connecting...'}
             </span>
           </div>
 
