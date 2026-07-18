@@ -35,7 +35,7 @@ function App() {
   };
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
       {screen === 'login' && (
         <div className="container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
           <h1 style={{ color: 'var(--accent-primary)', fontSize: '48px', marginBottom: '10px' }}>Tamago</h1>

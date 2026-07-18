@@ -72,6 +72,7 @@ function Dashboard({ myUserId, onProceed }) {
                   ))}
                 </Pie>
                 <Tooltip 
+                  formatter={(value) => `${(value * 100).toFixed(1)}%`}
                   contentStyle={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '12px', color: 'var(--text-primary)' }} 
                   itemStyle={{ color: 'var(--accent-primary)', fontWeight: 'bold' }}
                 />
@@ -88,6 +89,7 @@ function Dashboard({ myUserId, onProceed }) {
                 <XAxis dataKey="name" stroke="var(--text-secondary)" tick={{fontSize: 10}} interval={3} axisLine={false} tickLine={false} />
                 <YAxis hide />
                 <Tooltip 
+                  formatter={(value) => [`${(value * 100).toFixed(1)}%`, 'Activity']}
                   cursor={{fill: 'rgba(255,140,0,0.05)'}} 
                   contentStyle={{ backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '12px' }} 
                   itemStyle={{ color: 'var(--accent-primary)', fontWeight: 'bold' }}
