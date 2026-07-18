@@ -104,6 +104,20 @@ function getTimePeriodSummary(hoursA, hoursB) {
   return labelMap[bestPeriod] || 'Daytime Watchers';
 }
 
+// Helper to extract top 3 peak watch hours
+function getPeakHours(hoursArray) {
+  const formatted = hoursArray.map((pct, idx) => {
+    let hourLabel = '';
+    if (idx === 0) hourLabel = '12 AM';
+    else if (idx === 12) hourLabel = '12 PM';
+    else if (idx > 12) hourLabel = `${idx - 12} PM`;
+    else hourLabel = `${idx} AM`;
+    return { hour: hourLabel, pct };
+  });
+  formatted.sort((a, b) => b.pct - a.pct);
+  return formatted.slice(0, 3).map(item => item.hour);
+}
+
 // Core matchmaking engine calculation
 function computeMatchDetails(userIdA, userIdB) {
   if (String(userIdA) === String(userIdB)) return null;
@@ -185,6 +199,13 @@ function computeMatchDetails(userIdA, userIdB) {
   
   const timeAlignment = getTimePeriodSummary(userA.hours, userB.hours);
 
+  // Overlap percentages relative to each user's history
+  const user_a_overlap_pct = userA.videos.length > 0 ? (sharedVideoCount / userA.videos.length) * 100 : 0;
+  const user_b_overlap_pct = userB.videos.length > 0 ? (sharedVideoCount / userB.videos.length) * 100 : 0;
+
+  const user_a_peak_hours = getPeakHours(userA.hours);
+  const user_b_peak_hours = getPeakHours(userB.hours);
+
   return {
     match_id: `match_${userIdA}_${userIdB}`,
     user_a: userIdA,
@@ -194,7 +215,13 @@ function computeMatchDetails(userIdA, userIdB) {
     time_alignment: timeAlignment,
     blind_spot_a: blindSpotA.slice(0, 3),
     blind_spot_b: blindSpotB.slice(0, 3),
-    shared_video_count: sharedVideoCount
+    shared_video_count: sharedVideoCount,
+    user_a_total_videos: userA.videos.length,
+    user_b_total_videos: userB.videos.length,
+    user_a_overlap_pct: parseFloat(user_a_overlap_pct.toFixed(1)),
+    user_b_overlap_pct: parseFloat(user_b_overlap_pct.toFixed(1)),
+    user_a_peak_hours,
+    user_b_peak_hours
   };
 }
 

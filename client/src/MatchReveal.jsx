@@ -11,13 +11,23 @@ function MatchReveal({ myUserId, matchData, onStartChat, onSkip }) {
     time_alignment,
     blind_spot_a,
     blind_spot_b,
-    shared_video_count
+    shared_video_count,
+    user_a_overlap_pct,
+    user_b_overlap_pct,
+    user_a_peak_hours,
+    user_b_peak_hours
   } = matchData;
 
   const isUserA = String(user_a) === String(myUserId);
   const strangerId = isUserA ? user_b : user_a;
   const myBlindSpot = isUserA ? blind_spot_a : blind_spot_b;
   const theirBlindSpot = isUserA ? blind_spot_b : blind_spot_a;
+
+  const myOverlapPct = isUserA ? user_a_overlap_pct : user_b_overlap_pct;
+  const theirOverlapPct = isUserA ? user_b_overlap_pct : user_a_overlap_pct;
+
+  const myPeakHours = isUserA ? user_a_peak_hours : user_b_peak_hours;
+  const theirPeakHours = isUserA ? user_b_peak_hours : user_a_peak_hours;
 
   return (
     <div style={styles.container}>
@@ -46,7 +56,7 @@ function MatchReveal({ myUserId, matchData, onStartChat, onSkip }) {
             🕒 {time_alignment}
           </div>
           <div style={styles.overlapBadge}>
-            📺 {shared_video_count} exact videos overlap
+            📺 {shared_video_count} videos ({myOverlapPct}% of your logs, {theirOverlapPct}% of theirs)
           </div>
         </div>
 
@@ -59,6 +69,26 @@ function MatchReveal({ myUserId, matchData, onStartChat, onSkip }) {
                 {interest}
               </span>
             ))}
+          </div>
+        </div>
+
+        {/* Active Hours Comparison */}
+        <div style={styles.activeHoursContainer}>
+          <div style={styles.activeHoursCard}>
+            <span style={styles.activeHoursLabel}>Your Peak Hours</span>
+            <div style={styles.hoursList}>
+              {myPeakHours && myPeakHours.map((h, i) => (
+                <span key={i} style={styles.hourTag}>{h}</span>
+              ))}
+            </div>
+          </div>
+          <div style={styles.activeHoursCard}>
+            <span style={styles.activeHoursLabel}>Stranger's Peak Hours</span>
+            <div style={styles.hoursList}>
+              {theirPeakHours && theirPeakHours.map((h, i) => (
+                <span key={i} style={styles.hourTag}>{h}</span>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -314,6 +344,44 @@ const styles = {
     fontWeight: '600',
     boxShadow: 'var(--accent-glow)',
     transition: 'all 0.25s',
+  },
+  activeHoursContainer: {
+    display: 'flex',
+    gap: '15px',
+    width: '100%',
+    marginBottom: '20px',
+  },
+  activeHoursCard: {
+    flex: 1,
+    background: 'rgba(255, 140, 0, 0.03)',
+    border: '1px solid rgba(255, 140, 0, 0.1)',
+    borderRadius: '12px',
+    padding: '12px 16px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '8px',
+  },
+  activeHoursLabel: {
+    fontSize: '11px',
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    color: 'var(--text-secondary)',
+  },
+  hoursList: {
+    display: 'flex',
+    gap: '6px',
+    justifyContent: 'center',
+  },
+  hourTag: {
+    background: 'var(--bg-tertiary)',
+    padding: '4px 8px',
+    borderRadius: '6px',
+    fontSize: '11px',
+    fontWeight: '600',
+    color: 'var(--accent-primary)',
+    border: '1px solid var(--border-color)',
   }
 };
 
