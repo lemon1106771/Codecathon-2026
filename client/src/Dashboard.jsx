@@ -32,7 +32,8 @@ function Dashboard({ myUserId, onProceed }) {
     return (
       <div className="container" style={{ textAlign: 'center', paddingTop: '100px' }}>
         <h2>Profile Not Found</h2>
-        <button onClick={onProceed} className="primary-btn hover-scale" style={{ padding: '12px 24px', background: 'var(--accent-gradient)', color: '#fff', border: 'none', borderRadius: '12px', marginTop: '20px', cursor: 'pointer' }}>Go to Matchmaking Anyway</button>
+        <p style={{ color: 'var(--text-secondary)' }}>This User ID doesn't exist in our dataset.</p>
+        <button onClick={() => window.location.reload()} className="primary-btn hover-scale" style={{ padding: '12px 24px', background: 'var(--accent-gradient)', color: '#fff', border: 'none', borderRadius: '12px', marginTop: '20px', cursor: 'pointer' }}>Try Another ID</button>
       </div>
     );
   }

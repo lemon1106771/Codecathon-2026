@@ -47,7 +47,13 @@ function App() {
             style={{ padding: '15px', fontSize: '24px', width: '150px', textAlign: 'center', borderRadius: '12px', border: '2px solid var(--accent-primary)', background: 'var(--bg-primary)', color: 'var(--text-primary)', outline: 'none' }}
           />
           <button 
-            onClick={() => setScreen('dashboard')}
+            onClick={() => {
+              if (myUserId < 1 || myUserId > 244) {
+                alert("Please enter a valid User ID between 1 and 244.");
+                return;
+              }
+              setScreen('dashboard');
+            }}
             className="hover-scale"
             style={{ marginTop: '30px', padding: '15px 30px', background: 'var(--accent-gradient)', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer', boxShadow: 'var(--accent-glow)' }}
           >
