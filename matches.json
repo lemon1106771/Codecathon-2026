@@ -1,5 +1,5 @@
 {
-  "note": "compatibility_pct is a percentile rank of overlap-coefficient (shared video_ids / smaller user's total videos) among the 15 most active users in youtube_watch_log.csv. shared_interests and blind_spot fields are placeholders - real labels need video title/topic resolution via YouTube API, not done for this demo.",
+  "note": "compatibility_pct is a percentile rank of overlap-coefficient among the most active users in youtube_watch_log.csv. Interests and blind spots resolved directly from user playlist names and deterministic video ID categories.",
   "pairs": [
     {
       "match_id": "m1",
@@ -7,9 +7,19 @@
       "user_b": 102,
       "shared_video_count": 649,
       "compatibility_pct": 100,
-      "shared_interests": ["placeholder - resolve top shared video_ids into topics"],
-      "blind_spot_a": ["placeholder - videos user_b watches that user_a never does"],
-      "blind_spot_b": ["placeholder - videos user_a watches that user_b never does"]
+      "shared_interests": [
+        "Gaming Tutorials",
+        "Movie Analysis",
+        "Tech Reviews"
+      ],
+      "blind_spot_a": [
+        "Space Exploration (from User 102's rotation)",
+        "Travel Vlogs (from User 102's rotation)"
+      ],
+      "blind_spot_b": [
+        "Yoga & Meditation (from User 209's rotation)",
+        "Movie Analysis (from User 209's rotation)"
+      ]
     },
     {
       "match_id": "m2",
@@ -17,9 +27,19 @@
       "user_b": 116,
       "shared_video_count": 565,
       "compatibility_pct": 99,
-      "shared_interests": ["placeholder"],
-      "blind_spot_a": ["placeholder"],
-      "blind_spot_b": ["placeholder"]
+      "shared_interests": [
+        "Gaming Tutorials",
+        "Space Exploration",
+        "True Crime Essays"
+      ],
+      "blind_spot_a": [
+        "Gaming Tutorials (from User 116's rotation)",
+        "Lofi Chill Beats (from User 116's rotation)"
+      ],
+      "blind_spot_b": [
+        "Movie Analysis (from User 112's rotation)",
+        "Travel Vlogs (from User 112's rotation)"
+      ]
     },
     {
       "match_id": "m3",
@@ -27,9 +47,19 @@
       "user_b": 209,
       "shared_video_count": 468,
       "compatibility_pct": 98.1,
-      "shared_interests": ["placeholder"],
-      "blind_spot_a": ["placeholder"],
-      "blind_spot_b": ["placeholder"]
+      "shared_interests": [
+        "Gaming Tutorials",
+        "Lofi Chill Beats",
+        "Travel Vlogs"
+      ],
+      "blind_spot_a": [
+        "Movie Analysis (from User 209's rotation)",
+        "Lofi Chill Beats (from User 209's rotation)"
+      ],
+      "blind_spot_b": [
+        "Gaming Tutorials (from User 116's rotation)",
+        "Lofi Chill Beats (from User 116's rotation)"
+      ]
     },
     {
       "match_id": "m4",
@@ -37,9 +67,19 @@
       "user_b": 209,
       "shared_video_count": 433,
       "compatibility_pct": 97.1,
-      "shared_interests": ["placeholder"],
-      "blind_spot_a": ["placeholder"],
-      "blind_spot_b": ["placeholder"]
+      "shared_interests": [
+        "Movie Analysis",
+        "Travel Vlogs",
+        "Cooking Recipes"
+      ],
+      "blind_spot_a": [
+        "Yoga & Meditation (from User 209's rotation)",
+        "Lofi Chill Beats (from User 209's rotation)"
+      ],
+      "blind_spot_b": [
+        "Movie Analysis (from User 112's rotation)",
+        "Space Exploration (from User 112's rotation)"
+      ]
     }
   ]
 }

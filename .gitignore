@@ -1,0 +1,29 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Node modules
+node_modules/
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Huge Data Files (keep dictionary, ignore raw history files)
+data/spotify_history.csv
+data/youtube_watch_log.csv
+
+# Local env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local

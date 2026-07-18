@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Frequency — Stranger Chat by Taste</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- Header -->
+    <header class="app-header">
+      <div class="logo">
+        <span class="logo-icon">~</span>
+        <h1>Frequency</h1>
+      </div>
+      <div class="status-badge" id="network-status">
+        <span class="status-dot"></span>
+        <span class="status-text">Connected</span>
+      </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="main-content">
+      
+      <!-- 1. Queue Screen -->
+      <section id="screen-queue" class="screen active">
+        <div class="card queue-card">
+          <div class="radar-container">
+            <div class="radar-circle circle-1"></div>
+            <div class="radar-circle circle-2"></div>
+            <div class="radar-circle circle-3"></div>
+            <div class="radar-pulse"></div>
+            <div class="radar-avatar">
+              <span>?</span>
+            </div>
+          </div>
+          <h2 class="queue-title">Finding your frequency...</h2>
+          <p class="queue-subtitle">Analyzing YouTube watch logs for taste compatibility</p>
+          <div class="loading-bar-container">
+            <div class="loading-bar-fill"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. Match Reveal Screen -->
+      <section id="screen-reveal" class="screen">
+        <div class="card reveal-card">
+          <div class="compatibility-header">
+            <div class="badge">Match Found</div>
+            <div class="score-display">
+              <div class="score-number" id="reveal-score">0%</div>
+              <div class="score-label">overlap</div>
+            </div>
+            <h2 class="match-name" id="match-username">Stranger</h2>
+          </div>
+
+          <hr class="divider">
+
+          <div class="compatibility-body">
+            <!-- Shared Ground -->
+            <div class="interest-section">
+              <h3>Shared Ground</h3>
+              <div class="shared-interests-list" id="shared-interests">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+
+            <!-- Blind Spots side-by-side cards -->
+            <div class="blind-spots-grid">
+              <div class="blind-spot-card self">
+                <span class="blind-spot-icon">👤</span>
+                <h4>Your blind spot</h4>
+                <p id="blind-spot-self">Placeholder</p>
+              </div>
+              <div class="blind-spot-card stranger">
+                <span class="blind-spot-icon">👥</span>
+                <h4>Their blind spot</h4>
+                <p id="blind-spot-stranger">Placeholder</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="action-container">
+            <button id="btn-start-chat" class="btn btn-primary">Start Chatting &rarr;</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. Chat Screen -->
+      <section id="screen-chat" class="screen">
+        <div class="card chat-card">
+          <!-- Chat Header -->
+          <div class="chat-header-bar">
+            <div class="stranger-info">
+              <div class="avatar-small" id="chat-avatar-char">S</div>
+              <div>
+                <h3 id="chat-stranger-name">Stranger</h3>
+                <span class="chat-compatibility-sub" id="chat-compatibility-pct">0% overlap</span>
+              </div>
+            </div>
+            <button id="btn-skip" class="btn btn-secondary btn-small">Skip / Report</button>
+          </div>
+
+          <!-- Chat Messages Area -->
+          <div class="chat-messages-container" id="chat-messages">
+            <div class="system-message">
+              You are now connected. Say hello!
+            </div>
+            <!-- Messages go here -->
+          </div>
+
+          <!-- Chat Input Area -->
+          <form class="chat-input-area" id="chat-form">
+            <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off">
+            <button type="submit" class="btn-send">
+              <svg viewBox="0 0 24 24" class="send-icon">
+                <path d="M2,21L23,12L2,3V10L17,12L2,14V21Z" />
+              </svg>
+            </button>
+          </form>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>Codecathon 2026 — Theme: Your Digital Shadow</p>
+    </footer>
+  </div>
+
+  <!-- Socket.io client script -->
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- Application JS -->
+  <script src="js/app.js"></script>
+</body>
+</html>
