@@ -18,6 +18,11 @@ const userPlaylists = {};   // user_id -> Map of playlist_name -> count
 let activeUsersList = [];   // List of user IDs sorted by watch count
 let activeOverlaps = [];    // Sorted list of overlaps for percentile calculations
 
+// Global aggregates
+let topCategoriesGlobal = [];
+let topPlaylistsGlobal = [];
+let topUsersGlobal = [];
+
 // Categories for deterministic video ID hashing fallback
 const CATEGORIES = [
   "Gaming Tutorials",
@@ -131,6 +136,9 @@ try {
   pos = nextNewline + 1;
   nextNewline = fileData.indexOf('\n', pos);
   
+  const globalCategories = {};
+  const globalPlaylists = {};
+  
   let count = 0;
   while (nextNewline !== -1) {
     const line = fileData.substring(pos, nextNewline).trim();
@@ -148,11 +156,18 @@ try {
           }
           userVideos[userId].add(videoId);
           
+          // Globals Category count
+          const cat = getCategoryForVideo(videoId);
+          globalCategories[cat] = (globalCategories[cat] || 0) + 1;
+          
           if (playlistName && playlistName !== 'NA' && playlistName !== 'NULL') {
             videoPlaylists[videoId] = playlistName;
             
             // Count playlist name frequencies per user
             userPlaylists[userId][playlistName] = (userPlaylists[userId][playlistName] || 0) + 1;
+            
+            // Count global playlists
+            globalPlaylists[playlistName] = (globalPlaylists[playlistName] || 0) + 1;
           }
         }
       }
@@ -187,6 +202,27 @@ try {
   }
   activeOverlaps.sort((a, b) => a - b);
   console.log(`TAMAGO: Baseline overlap distribution calculated (Max: ${activeOverlaps[activeOverlaps.length-1].toFixed(4)}, Min: ${activeOverlaps[0].toFixed(4)}).`);
+
+  // 3. Compile Leaderboard Stats
+  topCategoriesGlobal = Object.keys(globalCategories)
+    .sort((a, b) => globalCategories[b] - globalCategories[a])
+    .slice(0, 5)
+    .map(name => ({ name, count: globalCategories[name] }));
+    
+  topPlaylistsGlobal = Object.keys(globalPlaylists)
+    .sort((a, b) => globalPlaylists[b] - globalPlaylists[a])
+    .slice(0, 5)
+    .map(rawName => {
+      const cleanName = PLAYLIST_MAPPING[rawName.toLowerCase()] || `${rawName.charAt(0).toUpperCase() + rawName.slice(1).toLowerCase()} Hits`;
+      return { name: cleanName, count: globalPlaylists[rawName] };
+    });
+    
+  topUsersGlobal = activeUsersList.slice(0, 5).map(id => ({
+    user_id: id,
+    watch_count: userVideos[id].size,
+    username: id === 209 ? "Alex Chen" : id === 102 ? "Mika Valance" : `User ${id}`
+  }));
+  console.log(`TAMAGO: Leaderboard global statistics compiled.`);
 
 } catch (e) {
   console.error("TAMAGO: Error loading youtube watch log:", e);
@@ -314,6 +350,89 @@ app.get('/api/users', (req, res) => {
   res.json(users);
 });
 
+// Function to dynamically calculate MBTI profile based on watch history categories ratio
+function calculateMBTI(userId) {
+  const set = userVideos[userId];
+  if (!set || set.size === 0) {
+    return {
+      type: "INTJ",
+      dimensions: { introversion: 50, intuition: 50, thinking: 50, judging: 50 },
+      description: "The Architect: Strategic and logical.",
+      analysis: "No data."
+    };
+  }
+
+  const counts = {};
+  let total = 0;
+  for (const vid of set) {
+    const cat = getCategoryForVideo(vid);
+    counts[cat] = (counts[cat] || 0) + 1;
+    total++;
+  }
+
+  const getCount = (cats) => {
+    let sum = 0;
+    cats.forEach(c => { sum += (counts[c] || 0); });
+    return sum;
+  };
+
+  const introCats = ["Lofi Chill Beats", "ASMR Programming", "Space Exploration", "Yoga & Meditation", "Movie Analysis"];
+  const introVal = total > 0 ? Math.round((getCount(introCats) / total) * 100) : 50;
+
+  const intuCats = ["Movie Analysis", "True Crime Essays", "Space Exploration"];
+  const intuVal = total > 0 ? Math.round((getCount(intuCats) / total) * 100) : 50;
+
+  const thinkCats = ["ASMR Programming", "Tech Reviews", "Space Exploration", "Gaming Tutorials"];
+  const thinkVal = total > 0 ? Math.round((getCount(thinkCats) / total) * 100) : 50;
+
+  const judCats = ["Yoga & Meditation", "Cooking Recipes", "Gaming Tutorials"];
+  const judVal = total > 0 ? Math.round((getCount(judCats) / total) * 100) : 50;
+
+  const I = introVal >= 50;
+  const N = intuVal >= 50;
+  const T = thinkVal >= 50;
+  const J = judVal >= 50;
+
+  const type = `${I ? 'I' : 'E'}${N ? 'N' : 'S'}${T ? 'T' : 'F'}${J ? 'J' : 'P'}`;
+
+  const DESCRIPTIONS = {
+    "INTJ": "The Architect: Strategic, logical, and driven by deep intellectual curiosity.",
+    "INTP": "The Logician: Innovative, analytical, and constantly seeking explanations.",
+    "INFJ": "The Advocate: Idealistic, empathetic, and guided by deep personal values.",
+    "INFP": "The Mediator: Imaginative, empathetic, and motivated by creative expression.",
+    "ISTJ": "The Logistician: Practical, detail-oriented, and focused on reliability.",
+    "ISTP": "The Virtuoso: Action-oriented, logical, and master of tools and mechanics.",
+    "ISFJ": "The Defender: Warm, detail-oriented, and dedicated to supporting others.",
+    "ISFP": "The Adventurer: Artistic, sensitive, and exploring new experiences.",
+    "ENTJ": "The Commander: Bold, strategic, and organized leaders.",
+    "ENTP": "The Debater: Curious, analytical, and loves exploring new ideas.",
+    "ENFJ": "The Protagonist: Charismatic, inspiring, and focused on community values.",
+    "ENFP": "The Campaigner: Enthusiastic, creative, and highly social dreamers.",
+    "ESTJ": "The Executive: Organized, practical, and efficient administrators.",
+    "ESTP": "The Entrepreneur: Energetic, action-oriented, and living in the moment.",
+    "ESFJ": "The Consul: Outgoing, warm, and focused on social harmony.",
+    "ESFP": "The Entertainer: Spontaneous, energetic, and loving active life experiences."
+  };
+
+  const analysis = `Based on category ratios across your ${total.toLocaleString()} watched videos:
+    - Reflective vs Social: ${introVal}% quiet/reflective content (suggesting ${I ? 'Introversion I' : 'Extraversion E'}).
+    - Abstract vs Factual: ${intuVal}% conceptual essays (suggesting ${N ? 'Intuition N' : 'Sensing S'}).
+    - Analytical vs Relaxing: ${thinkVal}% technical content (suggesting ${T ? 'Thinking T' : 'Feeling F'}).
+    - Structured vs Casual: ${judVal}% structured content (suggesting ${J ? 'Judging J' : 'Perceiving P'}).`;
+
+  return {
+    type,
+    dimensions: {
+      introversion: introVal,
+      intuition: intuVal,
+      thinking: thinkVal,
+      judging: judVal
+    },
+    description: DESCRIPTIONS[type] || "The Explorer: Dynamic curator.",
+    analysis
+  };
+}
+
 // 2. Get Single User Details (basic statistics)
 app.get('/api/user/:id', (req, res) => {
   const userId = parseInt(req.params.id, 10);
@@ -328,11 +447,13 @@ app.get('/api/user/:id', (req, res) => {
     catMap[cat] = (catMap[cat] || 0) + 1;
   }
   const topCategories = Object.keys(catMap).sort((a, b) => catMap[b] - catMap[a]).slice(0, 4);
+  const mbti = calculateMBTI(userId);
   
   res.json({
     user_id: userId,
     total_videos: userVideos[userId].size,
     top_categories: topCategories,
+    mbti: mbti,
     username: userId === 209 ? "Alex Chen" : userId === 102 ? "Mika Valance" : `Stranger #${userId + 4000}`
   });
 });
@@ -369,8 +490,7 @@ app.get('/api/match', (req, res) => {
   });
 });
 
-// 4. Live Matchmaking Calculation
-// Given userA and a mode ('sync' or 'shuffle'), find the best matching userB
+// 4. Live Matchmaking Calculation with candidates list logging
 app.get('/api/matchmake', (req, res) => {
   const userA = parseInt(req.query.user_a, 10);
   const mode = req.query.mode || 'sync';
@@ -379,48 +499,61 @@ app.get('/api/matchmake', (req, res) => {
     return res.status(400).json({ error: "Invalid user_a ID" });
   }
   
-  let bestUser = null;
-  let bestScore = mode === 'sync' ? -1 : 999999;
-  
-  // Scan all other users to find the match live
   const setA = userVideos[userA];
-  for (const userB of activeUsersList) {
+  const comparisons = [];
+  
+  // Compare against top 12 active users to simulate candidate log checks
+  const candidates = activeUsersList.slice(0, 12);
+  for (const userB of candidates) {
     if (userB === userA) continue;
     
     const setB = userVideos[userB];
     if (!setB) continue;
     
-    // Intersection
+    // Calculate overlap
     let sharedCount = 0;
     for (const vid of setA) {
       if (setB.has(vid)) sharedCount++;
     }
     const minSize = Math.min(setA.size, setB.size);
     const overlap = minSize > 0 ? (sharedCount / minSize) : 0;
+    const pct = calculatePercentile(overlap);
     
-    if (mode === 'sync') {
-      if (overlap > bestScore) {
-        bestScore = overlap;
-        bestUser = userB;
-      }
-    } else { // shuffle
-      if (overlap < bestScore) {
-        bestScore = overlap;
-        bestUser = userB;
-      }
-    }
+    comparisons.push({
+      user_id: userB,
+      watch_count: setB.size,
+      shared_count: sharedCount,
+      overlap_coeff: parseFloat(overlap.toFixed(4)),
+      compatibility_pct: pct
+    });
   }
   
-  if (bestUser === null) {
-    bestUser = activeUsersList[0] === userA ? activeUsersList[1] : activeUsersList[0];
+  // Sort based on mode
+  if (mode === 'sync') {
+    comparisons.sort((a, b) => b.overlap_coeff - a.overlap_coeff);
+  } else {
+    comparisons.sort((a, b) => a.overlap_coeff - b.overlap_coeff);
   }
   
+  const bestUser = comparisons[0].user_id;
   const details = computeOverlapDetails(userA, bestUser);
+  
   res.json({
     match_id: `m_${userA}_${bestUser}`,
     user_a: userA,
     user_b: bestUser,
+    mode: mode,
+    comparisons: comparisons,
     ...details
+  });
+});
+
+// 5. Global Leaderboard stats API
+app.get('/api/stats', (req, res) => {
+  res.json({
+    top_categories: topCategoriesGlobal,
+    top_playlists: topPlaylistsGlobal,
+    top_users: topUsersGlobal
   });
 });
 

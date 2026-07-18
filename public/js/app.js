@@ -6,6 +6,7 @@ const state = {
   socket: null,
   isConnected: false,
   users: [],
+  history: [], // Stores previous matches in this session
   logInterval: null,
   chatSimTimeout: null
 };
@@ -17,6 +18,8 @@ const el = {
   screenQueue: document.getElementById('screen-queue'),
   screenReveal: document.getElementById('screen-reveal'),
   screenChat: document.getElementById('screen-chat'),
+  screenStats: document.getElementById('screen-stats'),
+  screenHistory: document.getElementById('screen-history'),
   
   // Navigation & Headers
   sidebarNav: document.getElementById('sidebar-nav'),
@@ -24,8 +27,22 @@ const el = {
   statusDot: document.getElementById('status-dot'),
   statusText: document.getElementById('status-text'),
   currentUserAvatar: document.getElementById('current-user-avatar'),
+  searchInput: document.getElementById('search-input'),
+  btnBell: document.getElementById('btn-bell'),
+  btnSettings: document.getElementById('btn-settings'),
+  notificationsPanel: document.getElementById('notifications-panel'),
   
-  // Home Screen
+  // Modals
+  settingsModal: document.getElementById('settings-modal'),
+  btnCloseSettings: document.getElementById('btn-close-settings'),
+  btnThemeToggle: document.getElementById('btn-theme-toggle'),
+  themeBtnIcon: document.getElementById('theme-btn-icon'),
+  
+  // Home Screen Mode select
+  btnLandingSync: document.getElementById('btn-landing-sync'),
+  btnLandingShuffle: document.getElementById('btn-landing-shuffle'),
+  
+  // Home Screen Details
   userSelect: document.getElementById('user-select'),
   btnStartQueue: document.getElementById('btn-start-queue'),
   dnaTitle: document.getElementById('dna-title'),
@@ -37,10 +54,21 @@ const el = {
   axis2: document.getElementById('axis-2'),
   axis3: document.getElementById('axis-3'),
   axis4: document.getElementById('axis-4'),
+  mbtiTypeBadge: document.getElementById('mbti-type-badge'),
+  mbtiTypeTitle: document.getElementById('mbti-type-title'),
+  mbtiTypeDesc: document.getElementById('mbti-type-desc'),
+  mbtiDimVal1: document.getElementById('mbti-dim-val-1'),
+  mbtiDimFill1: document.getElementById('mbti-dim-fill-1'),
+  mbtiDimVal2: document.getElementById('mbti-dim-val-2'),
+  mbtiDimFill2: document.getElementById('mbti-dim-fill-2'),
+  mbtiDimVal3: document.getElementById('mbti-dim-val-3'),
+  mbtiDimFill3: document.getElementById('mbti-dim-fill-3'),
+  mbtiDimVal4: document.getElementById('mbti-dim-val-4'),
+  mbtiDimFill4: document.getElementById('mbti-dim-fill-4'),
+  mbtiLogicExplanation: document.getElementById('mbti-logic-explanation'),
   
   // Queue Screen
-  btnModeSync: document.getElementById('btn-mode-sync'),
-  btnModeShuffle: document.getElementById('btn-mode-shuffle'),
+  queueHeaderTitle: document.getElementById('queue-header-title'),
   btnStopSearch: document.getElementById('btn-stop-search'),
   dataStreamLog: document.getElementById('data-stream-log'),
   floatTag1: document.getElementById('float-tag-1'),
@@ -85,7 +113,17 @@ const el = {
   barVal2: document.getElementById('bar-val-2'),
   barFill2: document.getElementById('bar-fill-2'),
   barVal3: document.getElementById('bar-val-3'),
-  barFill3: document.getElementById('bar-fill-3')
+  barFill3: document.getElementById('bar-fill-3'),
+
+  // Stats Screen Lists
+  statsCategoriesList: document.getElementById('stats-categories-list'),
+  statsPlaylistsList: document.getElementById('stats-playlists-list'),
+  statsUsersList: document.getElementById('stats-users-list'),
+
+  // History Screen Elements
+  historyContainer: document.getElementById('history-container'),
+  historyEmptyState: document.getElementById('history-empty-state'),
+  historyList: document.getElementById('history-list')
 };
 
 // Profile images from mockups to cycle through
@@ -98,13 +136,13 @@ const AVATARS = [
 // Screen Transitions
 function transitionTo(screenId) {
   // Hide all screens
-  [el.screenHome, el.screenQueue, el.screenReveal, el.screenChat].forEach(screen => {
-    screen.classList.add('hidden');
+  [el.screenHome, el.screenQueue, el.screenReveal, el.screenChat, el.screenStats, el.screenHistory].forEach(screen => {
+    if (screen) screen.classList.add('hidden');
   });
   
   // Show target screen
   const target = document.getElementById(screenId);
-  target.classList.remove('hidden');
+  if (target) target.classList.remove('hidden');
   
   // Show/Hide top header
   if (screenId === 'screen-chat') {
@@ -115,21 +153,32 @@ function transitionTo(screenId) {
   
   // Update sidebar active status
   document.querySelectorAll('.nav-item').forEach(item => {
-    item.className = "nav-item flex items-center gap-6 px-6 py-4 text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-all";
-    const border = item.querySelector('.active-nav-border');
-    if (border) border.remove();
+    item.className = "nav-item flex items-center gap-6 px-6 py-4 text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-all cursor-pointer dark:text-zinc-400";
   });
   
   let activeNavId = 'home';
   if (screenId === 'screen-queue') activeNavId = 'queue';
   else if (screenId === 'screen-reveal') activeNavId = 'compatibility';
+  else if (screenId === 'screen-stats') activeNavId = 'stats';
+  else if (screenId === 'screen-history') activeNavId = 'history';
   else if (screenId === 'screen-chat') activeNavId = 'queue';
   
-  const activeNav = document.querySelector(`.nav-item[data-screen="${activeNavId}"]`) || 
-                    (activeNavId === 'compatibility' ? el.sidebarNav.children[2] : el.sidebarNav.children[1]);
+  let activeNav = null;
+  if (activeNavId === 'home') activeNav = el.sidebarNav.children[0];
+  else if (activeNavId === 'queue') activeNav = el.sidebarNav.children[1];
+  else if (activeNavId === 'compatibility') activeNav = el.sidebarNav.children[2];
+  else if (activeNavId === 'stats') activeNav = el.sidebarNav.children[3];
+  else if (activeNavId === 'history') activeNav = el.sidebarNav.children[4];
   
   if (activeNav) {
-    activeNav.className = "nav-item flex items-center gap-6 px-6 py-4 text-primary font-bold border-r-4 border-primary bg-primary-container/5 transition-all";
+    activeNav.className = "nav-item flex items-center gap-6 px-6 py-4 text-primary font-bold border-r-4 border-primary bg-primary-container/5 transition-all cursor-pointer";
+  }
+
+  // Load specific screen resources
+  if (screenId === 'screen-stats') {
+    loadLeaderboardStats();
+  } else if (screenId === 'screen-history') {
+    renderHistoryScreen();
   }
 }
 
@@ -195,12 +244,34 @@ async function handleUserChange(userId) {
     el.axis3.textContent = details.top_categories[2] || "ASMR";
     el.axis4.textContent = details.top_categories[3] || "Design";
     
+    // Render dynamic MBTI profile details
+    const mbti = details.mbti;
+    if (mbti) {
+      el.mbtiTypeBadge.textContent = mbti.type;
+      el.mbtiTypeTitle.textContent = mbti.description.split(':')[0] || "The Explorer";
+      el.mbtiTypeDesc.textContent = mbti.description.split(':')[1] || mbti.description;
+      
+      el.mbtiDimVal1.textContent = `${mbti.dimensions.introversion}% Quiet (I) vs ${100 - mbti.dimensions.introversion}% Social (E)`;
+      el.mbtiDimFill1.style.width = `${mbti.dimensions.introversion}%`;
+      
+      el.mbtiDimVal2.textContent = `${mbti.dimensions.intuition}% Conceptual (N) vs ${100 - mbti.dimensions.intuition}% Practical (S)`;
+      el.mbtiDimFill2.style.width = `${mbti.dimensions.intuition}%`;
+      
+      el.mbtiDimVal3.textContent = `${mbti.dimensions.thinking}% Analytical (T) vs ${100 - mbti.dimensions.thinking}% Feeling (F)`;
+      el.mbtiDimFill3.style.width = `${mbti.dimensions.thinking}%`;
+      
+      el.mbtiDimVal4.textContent = `${mbti.dimensions.judging}% Structured (J) vs ${100 - mbti.dimensions.judging}% Casual (P)`;
+      el.mbtiDimFill4.style.width = `${mbti.dimensions.judging}%`;
+      
+      el.mbtiLogicExplanation.textContent = mbti.analysis;
+    }
+    
   } catch (e) {
     console.error("Error loading user profile:", e);
   }
 }
 
-// 2. Queue scanning and animated logging console
+// 2. Queue scanning and transparent Jaccard calculation logs
 function startQueueFlow() {
   transitionTo('screen-queue');
   el.dataStreamLog.innerHTML = '';
@@ -211,49 +282,80 @@ function startQueueFlow() {
   el.floatTag2.textContent = tags[(state.currentUserId + 1) % tags.length];
   el.floatTag3.textContent = tags[(state.currentUserId + 2) % tags.length];
   
-  const logSteps = [
-    { text: "ESTABLISHING: handshake with local match pool...", type: "system" },
-    { text: `QUERYING: watch history index for User ${state.currentUserId}...`, type: "system" },
-    { text: `LOADED: ${el.dnaCategory1.textContent} preference clusters.`, type: "success" },
-    { text: "SCANNING: global match pool region_US...", type: "system" },
-    { text: "COMPUTING: dynamic intersection arrays...", type: "system" },
-    { text: "CALCULATING: co-occurrence matrices for 243 users...", type: "system" },
-    { text: "PROCESSING: filter mode delta = 0.05...", type: "system" },
-    { text: "SORTING: overlap coefficient vectors...", type: "success" },
-    { text: "MATCHING: evaluating candidate percentile ranks...", type: "system" },
-    { text: "SUCCESS: secure handshake established.", type: "success" }
-  ];
-  
-  let stepIdx = 0;
-  
-  // Add a line to the pipeline log every 300ms
-  state.logInterval = setInterval(() => {
-    if (stepIdx < logSteps.length) {
-      const step = logSteps[stepIdx];
-      const logItem = document.createElement('div');
-      logItem.className = `stream-item ${step.type === 'success' ? 'text-primary font-bold' : ''}`;
-      logItem.textContent = step.text;
-      el.dataStreamLog.appendChild(logItem);
-      el.dataStreamLog.scrollTop = el.dataStreamLog.scrollHeight;
-      stepIdx++;
-    }
-  }, 350);
-  
-  // Fetch compatibility calculation from matchmake API in the background
+  el.queueHeaderTitle.textContent = state.currentMode === 'sync' ? "Finding Sync Twin..." : "Finding Taste Contrast...";
+
+  // Immediately request match details from the server to get real comparisons
   fetch(`/api/matchmake?user_a=${state.currentUserId}&mode=${state.currentMode}`)
     .then(res => res.json())
     .then(match => {
       state.currentMatch = match;
       
-      // Delay transition to Reveal screen to let logs animate (min 3.5 seconds)
-      setTimeout(() => {
-        clearInterval(state.logInterval);
-        showRevealScreen(match);
-      }, 3600);
+      // Save to history log
+      const now = new Date();
+      state.history.push({
+        match_id: match.match_id,
+        user_b: match.user_b,
+        compatibility_pct: match.compatibility_pct,
+        timestamp: `${now.toLocaleString('default', { month: 'short' })} ${now.getDate()} • ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`,
+        shared_interests: match.shared_interests,
+        details: match
+      });
+
+      // Construct a sequence of realistic logs using the actual comparison data
+      const logLines = [
+        { text: `[INIT] User ${state.currentUserId} joined matchmaking queue in ${state.currentMode.toUpperCase()} mode...` },
+        { text: `[LOAD] Reading watch logs for User ${state.currentUserId} from database...` },
+        { text: `[INFO] User ${state.currentUserId} watches: ${el.dnaChips.children.length} distinct category clusters.` }
+      ];
+
+      // Insert real candidate evaluations returned by the server
+      if (match.comparisons && match.comparisons.length > 0) {
+        logLines.push({ text: `[CALC] Scanning all 243 active candidates...` });
+        logLines.push({ text: `[CALC] Formula: Overlap_Coeff = (SetA ∩ SetB) / min(|SetA|, |SetB|)` });
+        
+        match.comparisons.forEach(c => {
+          logLines.push({
+            text: `[COMP] Candidate User ${c.user_id} (${c.watch_count} views): shared = ${c.shared_count}. Jaccard overlap = ${c.overlap_coeff.toFixed(4)} -> Rank: ${c.compatibility_pct}%`,
+            highlight: c.user_id === match.user_b
+          });
+        });
+      }
+
+      logLines.push({ text: `[MATCH] Selection complete. Best twin is User ${match.user_b} (shared = ${match.shared_video_count} videos).` });
+      logLines.push({ text: `[MATH] Normalizing raw Jaccard index into percentile: ${match.compatibility_pct}% Match.` });
+      logLines.push({ text: `[RESOLVE] Mapping mutual watch history items in CSV...` });
+      logLines.push({ text: `[SYNC] Secure WebSocket room configured. Matching complete.`, success: true });
+
+      let logIdx = 0;
+      state.logInterval = setInterval(() => {
+        if (logIdx < logLines.length) {
+          const item = logLines[logIdx];
+          const div = document.createElement('div');
+          
+          if (item.highlight) {
+            div.className = "text-primary font-bold animate-pulse";
+          } else if (item.success) {
+            div.className = "text-secondary font-bold";
+          } else {
+            div.className = "text-zinc-600 dark:text-zinc-400";
+          }
+          
+          div.textContent = item.text;
+          el.dataStreamLog.appendChild(div);
+          el.dataStreamLog.scrollTop = el.dataStreamLog.scrollHeight;
+          logIdx++;
+        } else {
+          // Calculation logs finished, transition to Reveal
+          clearInterval(state.logInterval);
+          setTimeout(() => {
+            showRevealScreen(match);
+          }, 600);
+        }
+      }, 350);
+
     })
     .catch(err => {
       console.error("Matchmaking error:", err);
-      // Fallback
       clearInterval(state.logInterval);
       transitionTo('screen-home');
     });
@@ -277,7 +379,7 @@ function showRevealScreen(match) {
   let matchSummary = "Your viewing habits intersect on a few core genres, providing a nice balance of shared interests and unique topics to talk about.";
   if (pct >= 90) {
     matchHeadline = "Cinematic Soulmates";
-    matchSummary = "Your digital footprints are nearly identical. You both prioritize high-density video essays, tech curations, and obscure analytical topics.";
+    matchSummary = "Your digital footprints are nearly identical. You both prioritize high-fidelity video essays, tech curations, and obscure analytical topics.";
   } else if (pct < 70) {
     matchHeadline = "Curious Opposites";
     matchSummary = "Your tastes are far apart. You will introduce each other to completely fresh and unexpected content domains outside your regular bubbles.";
@@ -288,10 +390,7 @@ function showRevealScreen(match) {
   
   // Set reveal title and timestamp
   el.revealTitle.textContent = pct >= 90 ? "Unprecedented Sync" : pct >= 70 ? "Balanced Frequency" : "Contrast Discovery";
-  const now = new Date();
-  el.revealTimestamp.textContent = `${now.toLocaleString('default', { month: 'short' })} ${now.getDate()}, ${now.getFullYear()} • ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
   
-  // Clean names
   const strangerId = match.user_b;
   const username = strangerId === 102 ? "Mika Valance" : `Stranger #${strangerId + 4000}`;
   el.revealStrangerName.textContent = username;
@@ -422,13 +521,11 @@ function connectSocket() {
   state.socket = io();
   
   state.socket.on('connect', () => {
-    console.log('Socket.io connected');
     state.isConnected = true;
     updateStatusIndicator(true);
   });
   
   state.socket.on('disconnect', () => {
-    console.log('Socket.io disconnected');
     state.isConnected = false;
     updateStatusIndicator(false);
   });
@@ -461,7 +558,7 @@ function appendChatBubble(text, type) {
         <img class="w-full h-full object-cover" src="${AVATARS[strangerId % AVATARS.length]}"/>
       </div>
       <div class="space-y-1">
-        <div class="message-bubble-incoming p-4 rounded-2xl rounded-tl-none font-body-md text-on-surface">
+        <div class="message-bubble-incoming p-4 rounded-2xl rounded-tl-none font-body-md text-on-surface dark:bg-zinc-700">
           ${text}
         </div>
         <span class="text-[10px] text-outline px-2 font-label-sm">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
@@ -489,10 +586,8 @@ function triggerSimulatedReply(userMsg) {
   
   el.chatHeaderTyping.textContent = "Typing...";
   
-  // Generate response based on matched user's interests
   const interests = state.currentMatch.shared_interests;
   const mainInterest = interests[0] || "Video Essays";
-  const strangerId = state.currentMatch.user_b;
   
   const responses = [
     `I totally agree. Honestly, that's why I spend hours watching ${mainInterest.toLowerCase()} videos.`,
@@ -510,20 +605,186 @@ function triggerSimulatedReply(userMsg) {
   }, 2000);
 }
 
+// 5. Load YouTube Global Stats Leaderboard
+async function loadLeaderboardStats() {
+  try {
+    const res = await fetch('/api/stats');
+    const stats = await res.json();
+
+    // Max counts for progress bar mapping
+    const maxCat = stats.top_categories[0].count;
+    const maxPlay = stats.top_playlists[0].count;
+    const maxUser = stats.top_users[0].watch_count;
+
+    // Categories
+    el.statsCategoriesList.innerHTML = '';
+    stats.top_categories.forEach((c, idx) => {
+      const w = Math.round((c.count / maxCat) * 100);
+      const row = document.createElement('div');
+      row.className = "space-y-1.5";
+      row.innerHTML = `
+        <div class="flex justify-between text-xs font-semibold">
+          <span>${idx + 1}. ${c.name}</span>
+          <span class="text-primary font-mono">${c.count.toLocaleString()} views</span>
+        </div>
+        <div class="h-2 bg-surface-container rounded-full overflow-hidden">
+          <div class="h-full bg-primary" style="width: ${w}%"></div>
+        </div>
+      `;
+      el.statsCategoriesList.appendChild(row);
+    });
+
+    // Playlists
+    el.statsPlaylistsList.innerHTML = '';
+    stats.top_playlists.forEach((p, idx) => {
+      const w = Math.round((p.count / maxPlay) * 100);
+      const row = document.createElement('div');
+      row.className = "space-y-1.5";
+      row.innerHTML = `
+        <div class="flex justify-between text-xs font-semibold">
+          <span>${idx + 1}. ${p.name}</span>
+          <span class="text-secondary font-mono">${p.count.toLocaleString()} views</span>
+        </div>
+        <div class="h-2 bg-surface-container rounded-full overflow-hidden">
+          <div class="h-full bg-secondary" style="width: ${w}%"></div>
+        </div>
+      `;
+      el.statsPlaylistsList.appendChild(row);
+    });
+
+    // Users
+    el.statsUsersList.innerHTML = '';
+    stats.top_users.forEach((u, idx) => {
+      const w = Math.round((u.watch_count / maxUser) * 100);
+      const row = document.createElement('div');
+      row.className = "space-y-1.5";
+      row.innerHTML = `
+        <div class="flex justify-between text-xs font-semibold">
+          <span>${idx + 1}. ${u.username}</span>
+          <span class="text-primary-container font-mono">${u.watch_count.toLocaleString()} views</span>
+        </div>
+        <div class="h-2 bg-surface-container rounded-full overflow-hidden">
+          <div class="h-full bg-primary-container" style="width: ${w}%"></div>
+        </div>
+      `;
+      el.statsUsersList.appendChild(row);
+    });
+
+  } catch (e) {
+    console.error("Error loading stats:", e);
+  }
+}
+
+// 6. Match History Screen
+function renderHistoryScreen() {
+  if (state.history.length === 0) {
+    el.historyEmptyState.classList.remove('hidden');
+    el.historyList.classList.add('hidden');
+  } else {
+    el.historyEmptyState.classList.add('hidden');
+    el.historyList.classList.remove('hidden');
+    
+    el.historyList.innerHTML = '';
+    state.history.forEach((h, idx) => {
+      const row = document.createElement('div');
+      row.className = "glass-card p-6 rounded-2xl flex items-center justify-between hover:scale-[1.01] transition-transform duration-200 border-zinc-100/30";
+      
+      const strangerName = h.user_b === 102 ? "Mika Valance" : `Stranger #${h.user_b + 4000}`;
+      const avatarImg = AVATARS[h.user_b % AVATARS.length];
+      
+      row.innerHTML = `
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-full overflow-hidden border border-outline-variant/20 shrink-0">
+            <img class="w-full h-full object-cover" src="${avatarImg}"/>
+          </div>
+          <div>
+            <h4 class="font-label-md font-bold text-on-surface">${strangerName}</h4>
+            <p class="text-[10px] text-on-surface-variant">Matched on ${h.timestamp} • Mode: ${h.details.mode.toUpperCase()}</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-6">
+          <div class="text-right">
+            <span class="font-display-xl text-lg font-black text-primary">${h.compatibility_pct}%</span>
+            <span class="text-[10px] text-on-surface-variant block uppercase leading-none">Overlap</span>
+          </div>
+          <button class="btn-revisit-chat px-6 py-2.5 bg-primary text-white text-xs font-semibold rounded-full hover:scale-105 transition-all" data-idx="${idx}">
+            Reopen Chat
+          </button>
+        </div>
+      `;
+      
+      // Bind revisit chat button
+      row.querySelector('.btn-revisit-chat').addEventListener('click', () => {
+        state.currentMatch = h.details;
+        startChatSession();
+      });
+      
+      el.historyList.appendChild(row);
+    });
+  }
+}
+
+// 7. Search box filtering - selects user profile matching typed category
+function handleSearchInput(query) {
+  const term = query.toLowerCase().trim();
+  if (!term) return;
+
+  // Attempt to find a user in the loaded user list whose categories or details contain this string
+  fetch('/api/users')
+    .then(res => res.json())
+    .then(async (users) => {
+      for (const u of users) {
+        // Fetch details of user
+        const detailRes = await fetch(`/api/user/${u.user_id}`);
+        const details = await detailRes.json();
+        
+        const matched = details.top_categories.some(cat => cat.toLowerCase().includes(term)) ||
+                        u.username.toLowerCase().includes(term);
+        
+        if (matched) {
+          el.userSelect.value = u.user_id;
+          handleUserChange(u.user_id);
+          
+          // Flash select input to show selection
+          el.userSelect.classList.add('ring-4', 'ring-primary');
+          setTimeout(() => el.userSelect.classList.remove('ring-4', 'ring-primary'), 1000);
+          
+          // Clear search
+          el.searchInput.value = '';
+          return;
+        }
+      }
+      
+      // No profile found
+      alert(`No active profile matches interest: "${query}"`);
+      el.searchInput.value = '';
+    });
+}
+
 // Event Bindings
 document.addEventListener('DOMContentLoaded', () => {
-  // Load users list
   loadUsers();
-  
-  // Transition home initially
   transitionTo('screen-home');
   
-  // User select changes
+  // User dropdown changes
   el.userSelect.addEventListener('change', (e) => {
     handleUserChange(e.target.value);
   });
   
-  // Trigger matchmaking queue
+  // Mode selection buttons on landing hero
+  el.btnLandingSync.addEventListener('click', () => {
+    state.currentMode = 'sync';
+    el.btnLandingSync.className = "mode-btn px-6 py-3 rounded-full font-label-md text-sm font-semibold transition-all bg-primary text-white";
+    el.btnLandingShuffle.className = "mode-btn px-6 py-3 rounded-full font-label-md text-sm font-semibold transition-all text-on-surface-variant hover:text-primary dark:text-zinc-400";
+  });
+  
+  el.btnLandingShuffle.addEventListener('click', () => {
+    state.currentMode = 'shuffle';
+    el.btnLandingShuffle.className = "mode-btn px-6 py-3 rounded-full font-label-md text-sm font-semibold transition-all bg-primary text-white";
+    el.btnLandingSync.className = "mode-btn px-6 py-3 rounded-full font-label-md text-sm font-semibold transition-all text-on-surface-variant hover:text-primary dark:text-zinc-400";
+  });
+  
+  // Matchmaking trigger
   el.btnStartQueue.addEventListener('click', () => {
     startQueueFlow();
   });
@@ -533,36 +794,23 @@ document.addEventListener('DOMContentLoaded', () => {
     item.addEventListener('click', (e) => {
       e.preventDefault();
       const targetScreen = item.getAttribute('data-screen');
-      if (targetScreen === 'home') {
-        // Disconnect socket if leaving chat
-        if (state.socket) {
-          state.socket.disconnect();
-          state.socket = null;
-        }
-        transitionTo('screen-home');
-      } else if (targetScreen === 'queue') {
-        startQueueFlow();
+      
+      // Clean socket if leaving chat
+      if (state.socket) {
+        state.socket.disconnect();
+        state.socket = null;
+      }
+      
+      if (targetScreen) {
+        transitionTo(targetScreen === 'reveal' ? 'screen-reveal' : targetScreen === 'stats' ? 'screen-stats' : targetScreen === 'history' ? 'screen-history' : 'screen-home');
       }
     });
   });
   
-  // Stop queue / Cancel
+  // Cancel queue search
   el.btnStopSearch.addEventListener('click', () => {
     clearInterval(state.logInterval);
     transitionTo('screen-home');
-  });
-  
-  // Mode selection buttons
-  el.btnModeSync.addEventListener('click', () => {
-    state.currentMode = 'sync';
-    el.btnModeSync.className = "mode-select-btn w-full flex items-center gap-4 p-4 rounded-2xl bg-primary text-white shadow-xl transition-all hover:scale-102";
-    el.btnModeShuffle.className = "mode-select-btn w-full flex items-center gap-4 p-4 rounded-2xl glass-card border-outline-variant/30 text-on-surface-variant hover:bg-surface-container-high transition-all";
-  });
-  
-  el.btnModeShuffle.addEventListener('click', () => {
-    state.currentMode = 'shuffle';
-    el.btnModeShuffle.className = "mode-select-btn w-full flex items-center gap-4 p-4 rounded-2xl bg-primary text-white shadow-xl transition-all hover:scale-102";
-    el.btnModeSync.className = "mode-select-btn w-full flex items-center gap-4 p-4 rounded-2xl glass-card border-outline-variant/30 text-on-surface-variant hover:bg-surface-container-high transition-all";
   });
   
   // Initiate Chat click
@@ -588,12 +836,51 @@ document.addEventListener('DOMContentLoaded', () => {
     triggerSimulatedReply(msgText);
   });
   
-  // Skip Chat / Leave Room
+  // Leave Chat room
   el.btnChatSkip.addEventListener('click', () => {
     if (state.socket) {
       state.socket.disconnect();
       state.socket = null;
     }
     transitionTo('screen-home');
+  });
+
+  // Settings Modal controls
+  el.btnSettings.addEventListener('click', () => {
+    el.settingsModal.classList.remove('hidden');
+  });
+  
+  el.btnCloseSettings.addEventListener('click', () => {
+    el.settingsModal.classList.add('hidden');
+  });
+  
+  // Settings modal backdrop click to close
+  el.settingsModal.addEventListener('click', (e) => {
+    if (e.target === el.settingsModal) el.settingsModal.classList.add('hidden');
+  });
+
+  // Theme switch button
+  el.btnThemeToggle.addEventListener('click', () => {
+    const isDark = document.body.classList.toggle('dark');
+    document.documentElement.classList.toggle('dark');
+    el.themeBtnIcon.textContent = isDark ? "light_mode" : "dark_mode";
+  });
+
+  // Notifications dropdown panel toggle
+  el.btnBell.addEventListener('click', (e) => {
+    e.stopPropagation();
+    el.notificationsPanel.classList.toggle('hidden');
+  });
+
+  // Close notifications panel on body click
+  document.body.addEventListener('click', () => {
+    el.notificationsPanel.classList.add('hidden');
+  });
+
+  // Search box listener on Enter key press
+  el.searchInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      handleSearchInput(el.searchInput.value);
+    }
   });
 });
