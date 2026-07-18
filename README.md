@@ -1,4 +1,4 @@
-# Frequency
+# AppTitle
 
 Stranger-matching chat, but pairing is driven by taste compatibility instead of randomness. Built from real Spotify and YouTube history data.
 
@@ -15,7 +15,7 @@ This is a hackathon MVP. Deliberately cut:
 
 ## Structure
 ```
-frequency/
+apptitle/
   server/       Socket.io chat server (real-time piece)
   client/       Queue -> match reveal -> chat UI
   data/         Precomputed compatibility pairs from real dataset
