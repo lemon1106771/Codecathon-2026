@@ -106,6 +106,7 @@ function getTimePeriodSummary(hoursA, hoursB) {
 
 // Core matchmaking engine calculation
 function computeMatchDetails(userIdA, userIdB) {
+  if (String(userIdA) === String(userIdB)) return null;
   const userA = userProfiles[userIdA] || userProfiles[Object.keys(userProfiles)[0]];
   const userB = userProfiles[userIdB] || userProfiles[Object.keys(userProfiles)[1]];
   if (!userA || !userB) return null;
@@ -252,8 +253,8 @@ io.on('connection', (socket) => {
     
     console.log(`User ${userId} joined live matchmaking queue (Socket: ${socket.id})`);
     
-    // Try to pair with another waiting user in the queue (any other socket)
-    const otherWaiting = activeQueue.find(u => u.socketId !== socket.id);
+    // Try to pair with another waiting user in the queue (different socket and different userId)
+    const otherWaiting = activeQueue.find(u => u.socketId !== socket.id && String(u.userId) !== String(userId));
     
     if (otherWaiting) {
       // Remove the matched user from the queue
