@@ -5,12 +5,17 @@ function Queue({ myUserId, skipCount, onMatchFound, setMyUserId }) {
   const [dots, setDots] = useState('');
   const [userVal, setUserVal] = useState(myUserId);
   const [statusText, setStatusText] = useState('Entering live queue');
+  const [status, setStatus] = useState('searching'); // 'searching' | 'timeout'
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     setUserVal(myUserId);
   }, [myUserId]);
 
   useEffect(() => {
+    if (status !== 'searching') return;
+
+    setStatusText('Entering live queue');
     const dotInterval = setInterval(() => {
       setDots((prev) => (prev.length >= 3 ? '' : prev + '.'));
     }, 500);
@@ -30,7 +35,7 @@ function Queue({ myUserId, skipCount, onMatchFound, setMyUserId }) {
         setStatusText(messages[msgIndex]);
         msgIndex++;
       }
-    }, 1200);
+    }, 1500);
 
     // Setup Socket.io connection for live queueing
     const serverUrl = window.location.hostname === 'localhost' ? 'http://localhost:3001' : '';
@@ -49,43 +54,15 @@ function Queue({ myUserId, skipCount, onMatchFound, setMyUserId }) {
       onMatchFound(payload);
     });
 
-    // Fallback logic if no real user matches within 8 seconds
+    // Fallback logic if no real user matches within 15 seconds
     const fallbackTimeout = setTimeout(() => {
       if (!matchReceived) {
-        console.log('No online match found. Falling back to simulated match...');
-        setStatusText('Searching simulated database');
-        
-        const fetchUrl = `${serverUrl}/api/match?userId=${myUserId}&skipCount=${skipCount}`;
-        fetch(fetchUrl)
-          .then((res) => {
-            if (!res.ok) throw new Error('Server error');
-            return res.json();
-          })
-          .then((data) => {
-            if (!matchReceived) {
-              onMatchFound(data);
-            }
-          })
-          .catch((err) => {
-            console.error('Fallback fetch error:', err);
-            // hard fallback
-            const fallbackPayload = {
-              match_id: `match_${myUserId}_fallback`,
-              user_a: myUserId,
-              user_b: '99',
-              compatibility_pct: 88,
-              shared_interests: ['Shared Genre: Gaming', 'Shared Channel: Lofi Girl'],
-              time_alignment: 'Night Owls (active 11 PM - 4 AM)',
-              blind_spot_a: ['MrBeast'],
-              blind_spot_b: ['PewDiePie'],
-              shared_video_count: 12
-            };
-            if (!matchReceived) {
-              onMatchFound(fallbackPayload);
-            }
-          });
+        console.log('Matchmaking timed out. No online users found.');
+        setStatus('timeout');
+        socket.emit('leave-queue');
+        socket.disconnect();
       }
-    }, 8000); // Wait 8 seconds before falling back to simulated matching
+    }, 15000); // 15 seconds timeout
 
     return () => {
       clearInterval(dotInterval);
@@ -96,17 +73,68 @@ function Queue({ myUserId, skipCount, onMatchFound, setMyUserId }) {
       socket.emit('leave-queue');
       socket.disconnect();
     };
-  }, [myUserId, skipCount]);
+  }, [myUserId, skipCount, status, retryCount]);
 
   const handleUserChange = (e) => {
     e.preventDefault();
     const id = parseInt(userVal);
     if (id >= 1 && id <= 244) {
       setMyUserId(id);
+      // Restart search if they change user ID
+      setStatus('searching');
+      setRetryCount((prev) => prev + 1);
     } else {
       alert('Please enter a valid user ID between 1 and 244.');
     }
   };
+
+  const handleRetry = () => {
+    setStatus('searching');
+    setRetryCount((prev) => prev + 1);
+  };
+
+  if (status === 'timeout') {
+    return (
+      <div style={styles.container}>
+        <div className="glass-panel" style={styles.panel}>
+          <div style={styles.header}>
+            <span style={styles.logoEgg}>🥚</span>
+            <h1 style={styles.title}>tamago</h1>
+          </div>
+
+          <div style={styles.timeoutIcon}>⚠️</div>
+
+          <div style={styles.statusBox}>
+            <p style={styles.status}>No one is online right now</p>
+            <span style={styles.subtext}>Live matchmaking timed out after 15 seconds.</span>
+          </div>
+
+          <button 
+            onClick={handleRetry} 
+            className="hover-scale" 
+            style={styles.retryBtn}
+          >
+            Try Again 🔄
+          </button>
+          
+          <form onSubmit={handleUserChange} style={styles.form}>
+            <label style={styles.label}>Simulate as User ID (1-244):</label>
+            <div style={styles.inputGroup}>
+              <input 
+                type="number" 
+                min="1" 
+                max="244"
+                value={userVal} 
+                onChange={(e) => setUserVal(e.target.value)}
+                style={styles.input}
+              />
+              <button type="submit" style={styles.btn}>Set ID</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.container}>
@@ -222,6 +250,11 @@ const styles = {
     fontSize: '28px',
     color: '#fff',
   },
+  timeoutIcon: {
+    fontSize: '54px',
+    marginBottom: '20px',
+    animation: 'pulseGlow 2s infinite ease-in-out',
+  },
   statusBox: {
     marginBottom: '30px',
   },
@@ -279,6 +312,17 @@ const styles = {
     fontWeight: '600',
     cursor: 'pointer',
     transition: 'all 0.2s',
+  },
+  retryBtn: {
+    background: 'var(--accent-gradient)',
+    color: '#fff',
+    borderRadius: '12px',
+    padding: '12px 30px',
+    fontSize: '15px',
+    fontWeight: '600',
+    boxShadow: 'var(--accent-glow)',
+    marginBottom: '25px',
+    width: '80%',
   }
 };
 
