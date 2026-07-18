@@ -1,103 +1,158 @@
-# Implementation Plan: Taste-Based Stranger-Matching Chat App ("Sync")
+# Implementation Plan — Tamago: Stranger Chat by YouTube Taste
 
-This plan outlines the architecture and steps to implement a stranger-chat web application where users are matched based on their music and video taste profiles derived from Spotify and YouTube streaming histories.
+## Overview
 
-## User Review Required
-
-> [!IMPORTANT]
-> **Simulated Audio Features & Genres**: The provided `spotify_history.csv` and `youtube_watch_log.csv` do not contain Spotify audio features (energy, valence, danceability) or YouTube categories/topics directly. We will implement a Python preprocessing script that assigns realistic genres and audio features to the top 200+ artists and playlist terms, allowing us to build a rich, offline-capable taste-profile database for all 244 users.
-> 
-> **Hosting & Access**: Since the judges will need to join from their own devices (e.g. phones), the backend server will be built with Node.js and Socket.io, bind to all network interfaces (`0.0.0.0`), and can be exposed via `localhost` or an tunnel tool like Ngrok if needed.
-
-## Open Questions
-
-> [!NOTE]
-> 1. **Do you have a preferred UI color palette?** We propose a dark, premium, glassmorphic theme (deep blues, purples, and glowing accents) matching the aesthetics in the proposal PDF.
-> 2. **Would you like us to automate the Ngrok hosting step?** We can include instructions or a script to easily run and expose the local server so judges can access it on their phones.
-
-## Proposed Changes
-
-We will build the application in three main stages:
-1. **Data Preprocessing & Profile Generation (Python)**
-2. **Real-time Matchmaking & Chat Server (Node.js & Socket.io)**
-3. **Frontend Application (Vanilla HTML/JS/CSS with premium aesthetics)**
-4. **Notebook Submission Documentation (Jupyter Notebook update)**
+Tamago is a taste-based stranger-matching chat application. Instead of random pairing (like Omegle), users are matched using **real Jaccard set-overlap** computed from `youtube_watch_log.csv` — a dataset containing **1.84 million watch events** across **244 users**. The app surfaces compatibility scores, shared interests, blind spots, MBTI curation personas, and a global YouTube leaderboard — all derived dynamically from the CSV at runtime.
 
 ---
 
-### 1. Data Preprocessing
+## Architecture
 
-#### [NEW] [preprocess_data.py](file:///f:/github-project/Codecathon-2026/scripts/preprocess_data.py)
-This Python script will:
-- Parse `spotify_history.csv` to build a detailed profile for the "Current User" (User 0), identifying their top artists, top tracks, and listening habits.
-- Map the top 200+ artists from the dataset to genres (e.g., Rock, Indie, Pop, Folk, Latin, Classical, Jazz) and typical audio feature profiles (valence, energy, danceability).
-- Parse `youtube_watch_log.csv` for the 244 users, grouping by `user_id` to extract their watch patterns (active hours, subscription rates) and mapping playlist names (e.g., "apop", "House", "Country") to taste vectors.
-- Generate synthetic music history for the 244 users based on their YouTube playlist names and watch behaviors (e.g. matching pop playlists to pop artists) so that every user in the matchmaking pool has a complete Spotify + YouTube taste vector.
-- Save the results to [user_profiles.json](file:///f:/github-project/Codecathon-2026/data/user_profiles.json), containing pre-computed vectors and text summaries for matchmaking.
-
----
-
-### 2. Matchmaking & Chat Server
-
-#### [NEW] [package.json](file:///f:/github-project/Codecathon-2026/package.json)
-- Define Node.js project and dependencies (`express`, `socket.io`, `cors`).
-
-#### [NEW] [server.js](file:///f:/github-project/Codecathon-2026/server.js)
-- Express server serving the static frontend from the `public` directory.
-- Socket.io handler implementing:
-  - **Queue Management**: Active queues for `sync` (closest match), `shuffle` (farthest match), and `search` (matching search keywords).
-  - **Matchmaking Engine**: Periodically (e.g., every 2 seconds) calculates cosine similarity between queued users and pairs them.
-  - **Session Management**: Opens a private room for matched pairs, passes their compatibility data, and relays chat messages.
-
----
-
-### 3. Frontend Application
-
-#### [NEW] [index.html](file:///f:/github-project/Codecathon-2026/public/index.html)
-- A highly polished single-page interface with four states:
-  1. **Landing/Login**: Let the user choose to import the actual `spotify_history.csv` or select a pre-configured persona from the database.
-  2. **Queue Screen**: Animated radar-like visualization showing they are scanning the queue, with mode details.
-  3. **Compatibility Reveal**: A screen showing:
-     - Big circular overlap % graphic (e.g. "81% overlap").
-     - Shared ground (e.g., "Lo-fi, Indie rock, True-crime essays").
-     - Blind spots (e.g., "Your blind spot: K-Pop (40% of their rotation)").
-     - "Generate Bridge Playlist" button.
-     - "Start Chatting" button to progress.
-  4. **Chat Interface**: Clean chat window with message bubbles, status indicators, and a prominent "Report/Skip" button.
-
-#### [NEW] [style.css](file:///f:/github-project/Codecathon-2026/public/css/style.css)
-- Premium CSS containing:
-  - Custom font imports (Outfit or Inter).
-  - Dark mode variables (deep dark blues, glowing purples).
-  - Glassmorphic panels (`backdrop-filter: blur()`).
-  - Animations for the scanning radar, fade-ins, and page transitions.
-
-#### [NEW] [app.js](file:///f:/github-project/Codecathon-2026/public/js/app.js)
-- Socket.io integration.
-- UI state transitions and playlist rendering logic.
+```
+Codecathon-2026/
+├── index.js                    # Node.js + Express + Socket.io server
+│                                 - Parses youtube_watch_log.csv on startup
+│                                 - Builds per-user video sets, category maps
+│                                 - Computes Jaccard overlaps, MBTI profiles
+│                                 - Compiles global leaderboard aggregates
+│                                 - REST API endpoints + Socket.io chat relay
+├── public/
+│   ├── index.html              # Single-page app (6 screens)
+│   ├── css/style.css           # Custom animations, contrast overrides
+│   └── js/app.js               # Client-side state machine, Socket.io client
+├── data/
+│   ├── youtube_watch_log.csv   # 1.84M rows (gitignored — too large)
+│   └── spotify_history.csv     # Single-user Spotify data (gitignored)
+├── matches.json                # Precomputed fallback match pairs
+├── package.json                # Node.js dependencies (express, socket.io, cors)
+├── render.yaml                 # Render.com deployment config
+├── DEPLOYMENT.md               # Step-by-step Render.com hosting guide
+└── .gitignore                  # Excludes node_modules, CSV data files
+```
 
 ---
 
-### 4. Notebook Update
+## Data Pipeline (Server Startup)
 
-#### [MODIFY] [Swinbiggers_Code_Catalyst_Digital_Shadow_Colab_Template.ipynb](file:///f:/github-project/Codecathon-2026/Swinbiggers_Code_Catalyst_Digital_Shadow_Colab_Template.ipynb)
-- Update the Jupyter notebook to include:
-  1. Project direction (connecting the theme of Digital Shadows to matchmaking).
-  2. The code used to load and preprocess the datasets.
-  3. Analysis results (distribution of users, top artists, and a visualization of similarity distribution).
-  4. The ethical reflection section on privacy and moderation.
+On `node index.js`, the server performs these steps in ~2 seconds:
+
+1. **CSV Parsing** — Streams `youtube_watch_log.csv` line-by-line, building:
+   - `userVideos[userId]` → `Set<videoId>` (unique videos per user)
+   - `videoPlaylists[videoId]` → playlist name
+   - `userPlaylists[userId]` → `Map<playlist, count>`
+
+2. **Category Mapping** — Each video ID is deterministically hashed to one of 10 content categories (Gaming Tutorials, Lofi Chill Beats, True Crime Essays, Space Exploration, Tech Reviews, Movie Analysis, ASMR Programming, Cooking Recipes, Yoga & Meditation, Travel Vlogs).
+
+3. **Overlap Baseline** — Computes pairwise overlap coefficients for the top 20 most-active users, storing results in a sorted array for percentile ranking.
+
+4. **MBTI Cognitive Engine** — `calculateMBTI(userId)` maps each user's category ratio to 4 Myers-Briggs dimensions:
+   - **I/E** — Reflective categories (Lofi, ASMR, Space, Yoga, Movie Analysis) vs social categories
+   - **N/S** — Conceptual (Movie Analysis, True Crime, Space) vs practical (Tech, Cooking)
+   - **T/F** — Analytical (ASMR Programming, Tech, Gaming) vs emotional/artistic
+   - **J/P** — Structured (Yoga, Cooking, Gaming Tutorials) vs open-ended
+
+5. **Global Leaderboard** — Aggregates top categories, top playlists, and most-active users across all 1.84M events.
 
 ---
 
-## Verification Plan
+## REST API Endpoints
 
-### Automated Tests
-We will write a test script to verify:
-- Preprocessor correctness: check that `user_profiles.json` is generated with valid vectors and summaries.
-- Cosine similarity matching: check that the matchmaking algorithm correctly returns the closest/farthest profiles.
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/users` | GET | Top 20 most-active users (for dropdown selector) |
+| `/api/user/:id` | GET | User profile: video count, top categories, **MBTI analysis** |
+| `/api/match?user_a=X&user_b=Y` | GET | Precomputed overlap between two specific users |
+| `/api/matchmake?user_a=X&mode=sync` | GET | Live matchmaking: evaluates 12 candidates, returns best/worst match with full Jaccard logs |
+| `/api/stats` | GET | Global leaderboard: top categories, playlists, active users |
 
-### Manual Verification
-1. Run `node server.js` and open the app in two browser windows side-by-side.
-2. Select profiles and join the queue in both windows.
-3. Verify that the matching occurs, the compatibility card is rendered with correct overlap calculations, and chat messages are sent back and forth.
-4. Open the app on a mobile device on the same local network to verify responsiveness and mobile usability.
+---
+
+## Frontend Screens
+
+The app is a single-page application with 6 screens managed by a JavaScript state machine:
+
+### 1. Home / Landing (`#screen-home`)
+- **User selector dropdown** — Choose from top 20 active users
+- **Mode toggle** — Sync (closest match) or Shuffle (furthest match)
+- **Taste DNA radar chart** — Animated SVG radar showing top 4 category affinities
+- **MBTI Curation Persona card** — Dynamic MBTI type badge, 4 dimension progress bars, and a detailed analysis explanation showing how categories mapped to cognitive dimensions
+
+### 2. Queue / Finding (`#screen-queue`)
+- **Data Pipeline Terminal** — Shows real-time Jaccard calculation logs:
+  - Each candidate user ID, their watch count, shared video count, raw overlap coefficient, and compatibility percentile
+- **Floating category tags** — User's top interests
+- **Animated scanning state** with progress indicator
+
+### 3. Compatibility Reveal (`#screen-reveal`)
+- **Circular progress ring** — Animated SVG showing overlap percentage
+- **Shared grounds** — Videos/categories both users watch
+- **Blind spots** — Categories the matched user watches that you don't
+- **Mutual watch history** — Actual video IDs found in both sets' intersection
+
+### 4. Chat Room (`#screen-chat`)
+- **Socket.io real-time messaging** — With simulated AI replies for solo demo
+- **Match Analysis sidebar** — Overlap ring, shared interests chips, pacing preference
+- **Skip / Leave Room** button to return to home
+
+### 5. Leaderboard (`#screen-stats`)
+- **Top YouTube Categories** — Bar charts with view counts from the CSV
+- **Most Popular Playlists** — Ranked by occurrence
+- **Most Active Users** — Ranked by total videos watched
+
+### 6. History (`#screen-history`)
+- **Session match log** — Previous matches from the current session with overlap %, timestamp, and "Reopen Chat" action
+
+---
+
+## Interactive Features
+
+| Feature | Implementation |
+|---|---|
+| **Settings modal** | Database row count (1,844,919), server port, dark/light theme toggle |
+| **Notifications panel** | System alerts dropdown from bell icon |
+| **Dark mode** | Full theme toggle via `body.dark` class with Tailwind dark variants |
+
+---
+
+## Styling & UX Decisions
+
+- **Light mode default** — Clean white/purple Material 3 palette
+- **Tailwind CSS** — Utility-first styling via CDN with custom design tokens
+- **Glassmorphism** — `backdrop-blur`, translucent panels with subtle borders
+- **High-contrast chat bubbles** — Dark text (#1b1b1e) on light backgrounds; explicitly overridden in CSS to ensure readability
+- **SVG viewBox** — All circular progress rings use explicit `viewBox` to prevent clipping
+- **Select arrow reset** — Native browser dropdown arrows hidden via `appearance: none`
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Runtime | Node.js ≥ 18 |
+| Server | Express 4.x |
+| Real-time | Socket.io 4.x |
+| Frontend | Vanilla HTML + Tailwind CSS + Vanilla JS |
+| Data | CSV parsed at startup (no database) |
+| Deployment | Render.com (free tier) |
+
+---
+
+## How to Run Locally
+
+```bash
+# Install dependencies
+npm install
+
+# Start the server (parses CSV on startup, takes ~2s)
+node index.js
+
+# Open in browser
+# http://localhost:3001
+```
+
+---
+
+## Deployment
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for step-by-step instructions to deploy on Render.com. The CSV files must be committed or uploaded separately since they are gitignored due to size.

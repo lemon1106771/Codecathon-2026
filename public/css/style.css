@@ -100,11 +100,11 @@ body.dark .message-bubble-incoming {
 }
 
 .message-bubble-outgoing {
-  color: #ffffff !important;
-  background: #630ed4 !important;
+  color: #1b1b1e !important;
+  background: #e8def8 !important;
 }
 
 body.dark .message-bubble-outgoing {
-  color: #ffffff !important;
+  color: #000000 !important;
   background: #7c3aed !important;
 }

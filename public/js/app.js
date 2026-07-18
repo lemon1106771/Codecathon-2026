@@ -568,7 +568,7 @@ function appendChatBubble(text, type) {
     wrapper.className = "flex gap-4 max-w-[70%] self-end justify-end";
     wrapper.innerHTML = `
       <div class="space-y-1 text-right">
-        <div class="message-bubble-outgoing p-4 rounded-2xl rounded-tr-none font-body-md text-white">
+        <div class="message-bubble-outgoing p-4 rounded-2xl rounded-tr-none font-body-md">
           ${text}
         </div>
         <span class="text-[10px] text-outline px-2 font-label-sm">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
