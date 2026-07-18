@@ -5,8 +5,8 @@
   "main": "server/index.js",
   "scripts": {
     "setup": "npm run install:server && npm run install:client",
-    "install:server": "cd server && npm install",
-    "install:client": "cd client && npm install",
+    "install:server": "cd server && npm install --production=false",
+    "install:client": "cd client && npm install --production=false",
     "build:client": "cd client && npm run build",
     "build": "npm run install:server && npm run install:client && npm run build:client",
     "start": "cd server && npm start",
