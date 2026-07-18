@@ -225,6 +225,86 @@ function computeMatchDetails(userIdA, userIdB) {
   };
 }
 
+// Helper for MBTI prediction
+function predictMBTI(profile) {
+  const cats = profile.categories || {};
+  const hours = profile.hours || Array(24).fill(0);
+  
+  const ext = (cats['Vlogs'] || 0) + (cats['Entertainment'] || 0) + (cats['Comedy'] || 0) + (cats['People & Blogs'] || 0);
+  const int = (cats['Gaming'] || 0) + (cats['Education'] || 0) + (cats['Science & Technology'] || 0) + (cats['Film & Animation'] || 0);
+  const e_i = ext >= int ? 'E' : 'I';
+
+  const intui = (cats['Science & Technology'] || 0) + (cats['Education'] || 0) + (cats['Documentary'] || 0);
+  const sens = (cats['Sports'] || 0) + (cats['Music'] || 0) + (cats['Lifestyle'] || 0) + (cats['Autos & Vehicles'] || 0) + (cats['Pets & Animals'] || 0);
+  const n_s = intui >= sens ? 'N' : 'S';
+
+  const think = (cats['Science & Technology'] || 0) + (cats['Education'] || 0) + (cats['News & Politics'] || 0);
+  const feel = (cats['Music'] || 0) + (cats['Pets & Animals'] || 0) + (cats['Vlogs'] || 0) + (cats['People & Blogs'] || 0);
+  const t_f = think >= feel ? 'T' : 'F';
+
+  // J/P based on hours (J = day, P = night)
+  let day = 0; let night = 0;
+  for(let i = 6; i < 18; i++) day += hours[i];
+  for(let i = 0; i < 6; i++) night += hours[i];
+  for(let i = 18; i < 24; i++) night += hours[i];
+  const j_p = day >= night ? 'J' : 'P';
+
+  const mbti = `${e_i}${n_s}${t_f}${j_p}`;
+  
+  const mbtiTitles = {
+    'INTJ': 'The Mastermind', 'INTP': 'The Midnight Scholar',
+    'ENTJ': 'The Commander', 'ENTP': 'The Debater',
+    'INFJ': 'The Advocate', 'INFP': 'The Mediator',
+    'ENFJ': 'The Protagonist', 'ENFP': 'The Campaigner',
+    'ISTJ': 'The Logistician', 'ISFJ': 'The Defender',
+    'ESTJ': 'The Executive', 'ESFJ': 'The Consul',
+    'ISTP': 'The Virtuoso', 'ISFP': 'The Adventurer',
+    'ESTP': 'The Entrepreneur', 'ESFP': 'The Vibe Chaser'
+  };
+
+  return { mbti, title: mbtiTitles[mbti] || 'The Observer' };
+}
+
+// Profile REST endpoint for the Dashboard
+app.get('/api/profile/:userId', (req, res) => {
+  const userId = req.params.userId;
+  const profile = userProfiles[userId];
+  if (!profile) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  const mbtiData = predictMBTI(profile);
+  
+  const categoriesArr = Object.entries(profile.categories || {})
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([name, value]) => ({ name, value }));
+    
+  const hoursData = (profile.hours || Array(24).fill(0)).map((val, idx) => {
+    let hourLabel = '';
+    if (idx === 0) hourLabel = '12 AM';
+    else if (idx === 12) hourLabel = '12 PM';
+    else if (idx > 12) hourLabel = `${idx - 12} PM`;
+    else hourLabel = `${idx} AM`;
+    return { name: hourLabel, watches: val };
+  });
+  
+  const creatorsArr = Object.entries(profile.channels || {})
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([name, value]) => ({ name, value }));
+
+  return res.json({
+    userId,
+    mbti: mbtiData.mbti,
+    title: mbtiData.title,
+    topGenres: categoriesArr,
+    activityRhythm: hoursData,
+    topCreators: creatorsArr,
+    totalVideos: (profile.videos || []).length
+  });
+});
+
 // Fallback REST endpoint (simulates finding matches in offline dataset)
 app.get('/api/match', (req, res) => {
   const userIds = Object.keys(userProfiles);

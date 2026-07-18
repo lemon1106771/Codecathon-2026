@@ -147,3 +147,127 @@ button {
   font-weight: 600;
   transition: all 0.2s ease;
 }
+
+/* Dashboard Styles */
+.dashboard-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: fadeUp 0.6s ease-out;
+}
+
+.dashboard-header {
+  text-align: center;
+  margin-bottom: 10px;
+}
+.dashboard-header h1 {
+  font-size: 28px;
+  color: var(--text-primary);
+  margin-bottom: 5px;
+}
+.dashboard-header .subtitle {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.mbti-card {
+  position: relative;
+  text-align: center;
+  padding: 30px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 140, 0, 0.2);
+}
+.mbti-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 150px;
+  height: 150px;
+  background: var(--accent-primary);
+  border-radius: 50%;
+  filter: blur(80px);
+  transform: translate(-50%, -50%);
+  opacity: 0.2;
+  z-index: 0;
+}
+.mbti-type {
+  position: relative;
+  font-size: 48px;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 5px;
+  z-index: 1;
+}
+.mbti-title {
+  position: relative;
+  font-size: 18px;
+  color: var(--text-primary);
+  letter-spacing: 1px;
+  z-index: 1;
+}
+
+.charts-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.chart-card {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.chart-card h3 {
+  font-size: 16px;
+  color: var(--text-primary);
+  margin-bottom: 15px;
+  align-self: flex-start;
+}
+
+.creators-card {
+  padding: 20px;
+}
+.creators-card h3 {
+  font-size: 16px;
+  color: var(--text-primary);
+  margin-bottom: 15px;
+}
+.creators-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.creator-badge {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  padding: 12px 15px;
+  border-radius: 12px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.creator-rank {
+  color: var(--accent-primary);
+  font-weight: 800;
+  background: rgba(255,140,0,0.1);
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.dashboard-action {
+  margin-top: 20px;
+  text-align: center;
+}
+.match-button {
+  background: var(--accent-gradient);
+  color: #fff;
+  padding: 16px 40px;
+  font-size: 18px;
+  border-radius: 30px;
+  box-shadow: var(--accent-glow);
+}

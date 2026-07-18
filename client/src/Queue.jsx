@@ -117,20 +117,7 @@ function Queue({ myUserId, skipCount, onMatchFound, setMyUserId }) {
             Try Again 🔄
           </button>
           
-          <form onSubmit={handleUserChange} style={styles.form}>
-            <label style={styles.label}>Simulate as User ID (1-244):</label>
-            <div style={styles.inputGroup}>
-              <input 
-                type="number" 
-                min="1" 
-                max="244"
-                value={userVal} 
-                onChange={(e) => setUserVal(e.target.value)}
-                style={styles.input}
-              />
-              <button type="submit" style={styles.btn}>Set ID</button>
-            </div>
-          </form>
+
         </div>
       </div>
     );
@@ -157,20 +144,7 @@ function Queue({ myUserId, skipCount, onMatchFound, setMyUserId }) {
           <span style={styles.subtext}>Matchmaking using live Socket queue</span>
         </div>
 
-        <form onSubmit={handleUserChange} style={styles.form}>
-          <label style={styles.label}>Simulate as User ID (1-244):</label>
-          <div style={styles.inputGroup}>
-            <input 
-              type="number" 
-              min="1" 
-              max="244"
-              value={userVal} 
-              onChange={(e) => setUserVal(e.target.value)}
-              style={styles.input}
-            />
-            <button type="submit" style={styles.btn}>Set ID</button>
-          </div>
-        </form>
+
       </div>
     </div>
   );
