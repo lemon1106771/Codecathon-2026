@@ -70,8 +70,6 @@ function jaccardSimilarity(setA, setB) {
 
 // Get time period name from 24h distribution
 function getTimePeriodSummary(hoursA, hoursB) {
-  // Define time frames
-  // Morning (5-11), Afternoon (12-17), Evening (18-22), Night (23-4)
   const periods = [
     { name: 'Morning', hours: [5, 6, 7, 8, 9, 10, 11] },
     { name: 'Afternoon', hours: [12, 13, 14, 15, 16, 17] },
@@ -89,7 +87,6 @@ function getTimePeriodSummary(hoursA, hoursB) {
       scoreA += hoursA[h] || 0;
       scoreB += hoursB[h] || 0;
     }
-    // Combined score represents shared usage in this timeframe
     const combined = scoreA * scoreB;
     if (combined > maxScore) {
       maxScore = combined;
@@ -107,69 +104,23 @@ function getTimePeriodSummary(hoursA, hoursB) {
   return labelMap[bestPeriod] || 'Daytime Watchers';
 }
 
-// Matching endpoint
-app.get('/api/match', (req, res) => {
-  const userIds = Object.keys(userProfiles);
-  if (userIds.length < 2) {
-    return res.status(500).json({ error: 'Not enough user profiles to perform matching.' });
-  }
-
-  // 1. Determine active user (User A)
-  let userIdA = req.query.userId;
-  if (!userIdA || !userProfiles[userIdA]) {
-    // Pick a random user to represent "you"
-    userIdA = userIds[Math.floor(Math.random() * userIds.length)];
-  }
-  
+// Core matchmaking engine calculation
+function computeMatchDetails(userIdA, userIdB) {
   const userA = userProfiles[userIdA];
-  
-  // 2. Calculate compatibility score for all other users
-  const candidates = [];
+  const userB = userProfiles[userIdB];
+  if (!userA || !userB) return null;
+
   const setA = new Set(userA.videos);
+  const setB = new Set(userB.videos);
   
-  for (const userIdB of userIds) {
-    if (userIdB === userIdA) continue;
-    
-    const userB = userProfiles[userIdB];
-    const setB = new Set(userB.videos);
-    
-    const catSim = cosineSimilarityMaps(userA.categories, userB.categories);
-    const chanSim = cosineSimilarityMaps(userA.channels, userB.channels);
-    const timeSim = cosineSimilarityArrays(userA.hours, userB.hours);
-    const videoSim = jaccardSimilarity(setA, setB);
-    
-    // Weighted compatibility formula
-    const score = (0.4 * catSim) + (0.3 * chanSim) + (0.2 * timeSim) + (0.1 * videoSim);
-    
-    // Scale score to a user-friendly percentage (e.g. 40% to 99%)
-    const compatibility_pct = Math.min(99, Math.max(35, Math.round(35 + score * 65)));
-    
-    candidates.push({
-      user_b_id: userIdB,
-      score: score,
-      compatibility_pct: compatibility_pct,
-      catSim,
-      chanSim,
-      timeSim,
-      videoSim
-    });
-  }
+  const catSim = cosineSimilarityMaps(userA.categories, userB.categories);
+  const chanSim = cosineSimilarityMaps(userA.channels, userB.channels);
+  const timeSim = cosineSimilarityArrays(userA.hours, userB.hours);
+  const videoSim = jaccardSimilarity(setA, setB);
   
-  // Sort candidates by score descending
-  candidates.sort((a, b) => b.score - a.score);
+  const score = (0.4 * catSim) + (0.3 * chanSim) + (0.2 * timeSim) + (0.1 * videoSim);
+  const compatibility_pct = Math.min(99, Math.max(35, Math.round(35 + score * 65)));
   
-  // 3. Select match based on skipCount (for skipping match support)
-  let skipCount = parseInt(req.query.skipCount) || 0;
-  // Wrap around if skipCount is larger than available candidates
-  if (skipCount >= candidates.length) {
-    skipCount = skipCount % candidates.length;
-  }
-  
-  const matchResult = candidates[skipCount];
-  const userB = userProfiles[matchResult.user_b_id];
-  
-  // 4. Extract shared interests
-  // Categories both users watch, ranked by combined watch duration percentage
   const sharedCategories = [];
   for (const cat of Object.keys(userA.categories)) {
     const valA = userA.categories[cat] || 0;
@@ -180,7 +131,6 @@ app.get('/api/match', (req, res) => {
   }
   sharedCategories.sort((a, b) => b.product - a.product);
   
-  // Channels both users watch
   const sharedChannels = [];
   const allChannels = new Set([...Object.keys(userA.channels), ...Object.keys(userB.channels)]);
   for (const chan of allChannels) {
@@ -192,7 +142,6 @@ app.get('/api/match', (req, res) => {
   }
   sharedChannels.sort((a, b) => b.product - a.product);
   
-  // Combine top category and top channel into "shared interests"
   const sharedInterests = [];
   if (sharedCategories.length > 0) {
     sharedInterests.push(`Shared Genre: ${sharedCategories[0].name}`);
@@ -207,8 +156,6 @@ app.get('/api/match', (req, res) => {
     sharedInterests.push("General YouTube Observers");
   }
   
-  // 5. Extract Blind Spots
-  // Channels user B watches that user A does not watch (or watches very little)
   const blindSpotA = [];
   for (const chan of Object.keys(userB.channels)) {
     const valA = userA.channels[chan] || 0;
@@ -218,7 +165,6 @@ app.get('/api/match', (req, res) => {
     }
   }
   
-  // Channels user A watches that user B does not watch
   const blindSpotB = [];
   for (const chan of Object.keys(userA.channels)) {
     const valA = userA.channels[chan] || 0;
@@ -228,54 +174,129 @@ app.get('/api/match', (req, res) => {
     }
   }
   
-  // Fallbacks if blind spots are empty
   if (blindSpotA.length === 0) blindSpotA.push("Lofi Hip Hop");
   if (blindSpotB.length === 0) blindSpotB.push("Technical Analysis");
 
-  // Exact video overlap count
-  const setB = new Set(userB.videos);
   let sharedVideoCount = 0;
   for (const vid of setA) {
     if (setB.has(vid)) sharedVideoCount++;
   }
   
-  // Get time alignment label
   const timeAlignment = getTimePeriodSummary(userA.hours, userB.hours);
 
-  // Return full compatibility payload
-  res.json({
-    match_id: `match_${userIdA}_${userB.user_id}`,
-    user_a: userA.user_id,
-    user_b: userB.user_id,
-    compatibility_pct: matchResult.compatibility_pct,
+  return {
+    match_id: `match_${userIdA}_${userIdB}`,
+    user_a: userIdA,
+    user_b: userIdB,
+    compatibility_pct,
     shared_interests: sharedInterests,
     time_alignment: timeAlignment,
-    blind_spot_a: blindSpotA.slice(0, 3), // top 3
-    blind_spot_b: blindSpotB.slice(0, 3), // top 3
+    blind_spot_a: blindSpotA.slice(0, 3),
+    blind_spot_b: blindSpotB.slice(0, 3),
     shared_video_count: sharedVideoCount
-  });
+  };
+}
+
+// Fallback REST endpoint (simulates finding matches in offline dataset)
+app.get('/api/match', (req, res) => {
+  const userIds = Object.keys(userProfiles);
+  if (userIds.length < 2) {
+    return res.status(500).json({ error: 'Not enough user profiles.' });
+  }
+
+  let userIdA = req.query.userId;
+  if (!userIdA || !userProfiles[userIdA]) {
+    userIdA = userIds[Math.floor(Math.random() * userIds.length)];
+  }
+  
+  const candidates = [];
+  for (const userIdB of userIds) {
+    if (userIdB === userIdA) continue;
+    const details = computeMatchDetails(userIdA, userIdB);
+    if (details) {
+      candidates.push({
+        user_b_id: userIdB,
+        compatibility_pct: details.compatibility_pct,
+        details: details
+      });
+    }
+  }
+  
+  // Sort by compatibility descending
+  candidates.sort((a, b) => b.compatibility_pct - a.compatibility_pct);
+  
+  let skipCount = parseInt(req.query.skipCount) || 0;
+  if (skipCount >= candidates.length) {
+    skipCount = skipCount % candidates.length;
+  }
+  
+  const matchResult = candidates[skipCount];
+  res.json(matchResult.details);
 });
 
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
-// Basic Socket.io chat room logic
+// Active live queue for online users
+// Array of { socketId, userId }
+let activeQueue = [];
+
+// Socket.io Event Handling
 io.on('connection', (socket) => {
-  let activeRoom = 'demo-room';
-  
+  let activeRoom = null;
+  console.log(`Socket connected: ${socket.id}`);
+
+  socket.on('join-queue', ({ userId }) => {
+    // Remove duplicate sockets for this user in queue if any
+    activeQueue = activeQueue.filter(u => u.socketId !== socket.id);
+    
+    console.log(`User ${userId} joined live matchmaking queue (Socket: ${socket.id})`);
+    
+    // Try to pair with another waiting user in the queue
+    const otherWaiting = activeQueue.find(u => u.userId !== userId);
+    
+    if (otherWaiting) {
+      // Remove the matched user from the queue
+      activeQueue = activeQueue.filter(u => u.socketId !== otherWaiting.socketId);
+      
+      console.log(`Live match found! User ${userId} <-> User ${otherWaiting.userId}`);
+      
+      // Calculate dynamic match details
+      const matchPayload = computeMatchDetails(userId, otherWaiting.userId);
+      
+      // Broadcast match-found to both users
+      socket.emit('match-found', matchPayload);
+      io.to(otherWaiting.socketId).emit('match-found', matchPayload);
+    } else {
+      // Add to queue
+      activeQueue.push({ socketId: socket.id, userId });
+      console.log(`Active Queue length: ${activeQueue.length}`);
+    }
+  });
+
+  socket.on('leave-queue', () => {
+    activeQueue = activeQueue.filter(u => u.socketId !== socket.id);
+    console.log(`Socket ${socket.id} left queue`);
+  });
+
   socket.on('join-room', (roomId) => {
-    socket.leave(activeRoom);
-    activeRoom = roomId || 'demo-room';
+    if (activeRoom) {
+      socket.leave(activeRoom);
+    }
+    activeRoom = roomId;
     socket.join(activeRoom);
     console.log(`Socket ${socket.id} joined room: ${activeRoom}`);
   });
 
   socket.on('chat-message', (msg) => {
-    socket.to(activeRoom).emit('chat-message', msg);
+    if (activeRoom) {
+      socket.to(activeRoom).emit('chat-message', msg);
+    }
   });
   
   socket.on('disconnect', () => {
-    console.log(`Socket ${socket.id} disconnected`);
+    activeQueue = activeQueue.filter(u => u.socketId !== socket.id);
+    console.log(`Socket disconnected: ${socket.id}`);
   });
 });
 

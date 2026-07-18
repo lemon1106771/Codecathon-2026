@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { io } from 'socket.io-client';
 
 function Queue({ myUserId, skipCount, onMatchFound, setMyUserId }) {
   const [dots, setDots] = useState('');
   const [userVal, setUserVal] = useState(myUserId);
-  const [statusText, setStatusText] = useState('Finding your frequency');
+  const [statusText, setStatusText] = useState('Entering live queue');
 
   useEffect(() => {
     setUserVal(myUserId);
@@ -15,12 +16,12 @@ function Queue({ myUserId, skipCount, onMatchFound, setMyUserId }) {
     }, 500);
 
     const messages = [
-      'Scanning watch history...',
-      'Analyzing top channels...',
-      'Mapping category vectors...',
+      'Scanning for other online users...',
+      'Comparing active taste profiles...',
+      'Checking compatible watch history...',
       'Aligning peak active hours...',
-      'Calculating compatibility coefficients...',
-      'Finding the perfect match...'
+      'Searching for live matches...',
+      'Waiting for another user to connect...'
     ];
 
     let msgIndex = 0;
@@ -29,59 +30,71 @@ function Queue({ myUserId, skipCount, onMatchFound, setMyUserId }) {
         setStatusText(messages[msgIndex]);
         msgIndex++;
       }
-    }, 600);
+    }, 1200);
 
-    // Fetch match from server
-    // Support custom backend URL via window location or default to localhost
-    const serverHost = window.location.hostname === 'localhost' ? 'http://localhost:3001' : '';
-    const fetchUrl = `${serverHost}/api/match?userId=${myUserId}&skipCount=${skipCount}`;
+    // Setup Socket.io connection for live queueing
+    const serverUrl = window.location.hostname === 'localhost' ? 'http://localhost:3001' : '';
+    const socket = io(serverUrl);
 
-    let matchPayload = null;
-    let timerDone = false;
+    let matchReceived = false;
 
-    fetch(fetchUrl)
-      .then((res) => {
-        if (!res.ok) throw new Error('Server error');
-        return res.json();
-      })
-      .then((data) => {
-        matchPayload = data;
-        if (timerDone) {
-          onMatchFound(data);
-        }
-      })
-      .catch((err) => {
-        console.error('Error fetching match:', err);
-        // Fallback placeholder data if server is offline
-        matchPayload = {
-          match_id: 'fallback_match',
-          user_a: myUserId,
-          user_b: 'unknown',
-          compatibility_pct: 88,
-          shared_interests: ['Shared Genre: Gaming', 'Shared Channel: Lofi Girl'],
-          time_alignment: 'Night Owls (active 11 PM - 4 AM)',
-          blind_spot_a: ['MrBeast', 'Veritasium'],
-          blind_spot_b: ['PewDiePie', 'Lofi Girl'],
-          shared_video_count: 12
-        };
-        if (timerDone) {
-          onMatchFound(matchPayload);
-        }
-      });
+    socket.on('connect', () => {
+      console.log(`Connected to server. Joining live queue as User #${myUserId}...`);
+      socket.emit('join-queue', { userId: myUserId });
+    });
 
-    const timeout = setTimeout(() => {
-      timerDone = true;
-      if (matchPayload) {
-        onMatchFound(matchPayload);
-      } else {
-        setStatusText('Wrapping up match details...');
+    socket.on('match-found', (payload) => {
+      console.log('Live match found via Socket!', payload);
+      matchReceived = true;
+      onMatchFound(payload);
+    });
+
+    // Fallback logic if no real user matches within 8 seconds
+    const fallbackTimeout = setTimeout(() => {
+      if (!matchReceived) {
+        console.log('No online match found. Falling back to simulated match...');
+        setStatusText('Searching simulated database');
+        
+        const fetchUrl = `${serverUrl}/api/match?userId=${myUserId}&skipCount=${skipCount}`;
+        fetch(fetchUrl)
+          .then((res) => {
+            if (!res.ok) throw new Error('Server error');
+            return res.json();
+          })
+          .then((data) => {
+            if (!matchReceived) {
+              onMatchFound(data);
+            }
+          })
+          .catch((err) => {
+            console.error('Fallback fetch error:', err);
+            // hard fallback
+            const fallbackPayload = {
+              match_id: `match_${myUserId}_fallback`,
+              user_a: myUserId,
+              user_b: '99',
+              compatibility_pct: 88,
+              shared_interests: ['Shared Genre: Gaming', 'Shared Channel: Lofi Girl'],
+              time_alignment: 'Night Owls (active 11 PM - 4 AM)',
+              blind_spot_a: ['MrBeast'],
+              blind_spot_b: ['PewDiePie'],
+              shared_video_count: 12
+            };
+            if (!matchReceived) {
+              onMatchFound(fallbackPayload);
+            }
+          });
       }
-    }, 3500); // 3.5 seconds delay
+    }, 8000); // Wait 8 seconds before falling back to simulated matching
 
     return () => {
       clearInterval(dotInterval);
       clearInterval(msgInterval);
-      clearTimeout(timeout);
+      clearTimeout(fallbackTimeout);
+      
+      // Leave the queue and close connection cleanly
+      socket.emit('leave-queue');
+      socket.disconnect();
     };
   }, [myUserId, skipCount]);
 
@@ -113,7 +126,7 @@ function Queue({ myUserId, skipCount, onMatchFound, setMyUserId }) {
 
         <div style={styles.statusBox}>
           <p style={styles.status}>{statusText}{dots}</p>
-          <span style={styles.subtext}>Matchmaking using personalized taste vectors</span>
+          <span style={styles.subtext}>Matchmaking using live Socket queue</span>
         </div>
 
         <form onSubmit={handleUserChange} style={styles.form}>
